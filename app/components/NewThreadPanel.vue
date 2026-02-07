@@ -1,0 +1,112 @@
+<template>
+  <div class="flex flex-col h-screen bg-white">
+    <!-- Mobile Header -->
+    <div class="flex md:hidden items-center justify-between px-4 h-14 bg-white border-b border-[#E5E7EB]">
+      <button class="w-6 h-6 flex items-center justify-center" @click="$emit('open-drawer')">
+        <UIcon name="i-lucide-menu" class="w-6 h-6 text-[#111827]" />
+      </button>
+      <span class="text-base font-semibold text-[#111827]">New Thread</span>
+      <div class="w-6" />
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 flex flex-col pt-8 px-5 pb-5 overflow-y-auto">
+      <div class="w-full max-w-[520px] mx-auto flex flex-col gap-6 flex-1">
+        <!-- Header -->
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-12 h-12 rounded-full bg-[#F3F4F6] flex items-center justify-center">
+            <UIcon name="i-lucide-message-square-plus" class="w-6 h-6 text-[#6B7280]" />
+          </div>
+          <h1 class="text-[18px] font-semibold text-[#111827]">Start a new thread</h1>
+          <p class="text-[13px] text-[#6B7280] text-center">Choose an agent preset and configure your session</p>
+        </div>
+
+        <!-- Preset Selection -->
+        <div class="w-full flex flex-col gap-2">
+          <label class="text-[13px] font-semibold text-[#374151]">Agent Preset</label>
+          <div class="flex flex-col gap-2">
+            <button
+              v-for="preset in presets"
+              :key="preset.id"
+              type="button"
+              class="w-full rounded-[10px] border-2 p-3.5 text-left transition-colors"
+              :class="selectedPreset === preset.id
+                ? 'border-[#10A37F] bg-white'
+                : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'"
+              @click="selectedPreset = preset.id"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                    :class="preset.id === 'claude-code' ? 'bg-[#D97706]' : 'bg-[#3B82F6]'"
+                  >
+                    <UIcon
+                      :name="preset.id === 'claude-code' ? 'i-lucide-bot' : 'i-lucide-code'"
+                      class="w-4 h-4 text-white"
+                    />
+                  </div>
+                  <span class="text-sm font-semibold text-[#111827]">{{ preset.name }}</span>
+                </div>
+                <UIcon
+                  v-if="selectedPreset === preset.id"
+                  name="i-lucide-circle-check-big"
+                  class="w-[18px] h-[18px] text-[#10A37F] shrink-0"
+                />
+              </div>
+              <p class="text-[13px] text-[#6B7280] mt-1.5">{{ preset.description }}</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- CWD Input -->
+        <div class="w-full flex flex-col gap-2">
+          <label class="text-[13px] font-semibold text-[#374151]">Working Directory</label>
+          <div class="flex items-center gap-2.5 w-full h-[44px] bg-white rounded-lg border border-[#D1D5DB] px-3.5 focus-within:ring-2 focus-within:ring-[#10A37F] focus-within:border-transparent transition-all">
+            <UIcon name="i-lucide-folder" class="w-4 h-4 text-[#6B7280] shrink-0" />
+            <input
+              v-model="cwd"
+              type="text"
+              placeholder="/home/user/projects"
+              class="flex-1 bg-transparent border-none outline-none text-sm text-[#111827] placeholder:text-[#9CA3AF] min-w-0"
+            />
+            <span class="text-[#10A37F] text-[13px] font-medium cursor-pointer shrink-0">Browse</span>
+          </div>
+        </div>
+
+        <!-- Spacer -->
+        <div class="flex-1" />
+
+        <!-- Start Button -->
+        <button
+          class="w-full h-12 bg-[#10A37F] hover:bg-[#059669] rounded-[10px] flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          :disabled="!cwd.trim()"
+          @click="handleStart"
+        >
+          <UIcon name="i-lucide-play" class="w-[18px] h-[18px] text-white" />
+          <span class="text-[15px] font-semibold text-white">Start Thread</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { AGENT_PRESETS } from '~/composables/useSettings'
+
+const emit = defineEmits<{
+  start: [presetId: string, cwd: string]
+  'open-drawer': []
+}>()
+
+const presets = AGENT_PRESETS
+const { settings } = useSettings()
+
+const selectedPreset = ref(settings.value.preset)
+const cwd = ref('')
+
+const handleStart = () => {
+  if (!cwd.value.trim()) return
+  emit('start', selectedPreset.value, cwd.value.trim())
+}
+</script>
