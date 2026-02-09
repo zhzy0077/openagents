@@ -3,18 +3,16 @@
     :messages="messages"
     :status="status"
     :input="input"
-    :tool-calls="toolCalls"
-    :permission-asks="permissionAsks"
     :config-options="configOptions"
     :active-conversation-title="activeConversationTitle"
     @update:input="input = $event"
-    @send="handleSendMessage"
+    @send="sendMessage"
     @stop="stop"
-    @clear="handleClear"
-    @respond-permission="handleRespondPermission"
-    @set-config-option="handleSetConfigOption"
+    @clear="clear"
+    @respond-permission="respondToPermission"
+    @set-config-option="setConfigOption"
     @open-drawer="drawerOpen = true"
-    @new-conversation="navigateTo('/new')"
+    @new-conversation="router.push('/new')"
   />
 </template>
 
@@ -31,14 +29,13 @@ const {
   loaded,
   loadConversations,
   updateConversation,
+  syncConversationTitleFromSession,
 } = useConversations()
 
 const {
   messages,
   status,
   input,
-  toolCalls,
-  permissionAsks,
   configOptions,
   sendMessage,
   stop,
@@ -53,12 +50,21 @@ const {
   onSessionReady: async (sessionId) => {
     await updateConversation(conversationId.value, { sessionId })
   },
+  onSessionTitle: async (_sessionId, title) => {
+    await syncConversationTitleFromSession(conversationId.value, title)
+  },
 })
 
 const activeConversationTitle = computed(() => {
   const conv = conversations.value.find(c => c.id === conversationId.value)
   return conv?.title
 })
+
+useHead(() => ({
+  title: activeConversationTitle.value
+    ? `${activeConversationTitle.value} - OpenAgents`
+    : 'Chat - OpenAgents',
+}))
 
 const initializeConversation = async () => {
   if (!loaded.value) {
@@ -67,7 +73,7 @@ const initializeConversation = async () => {
 
   const conversation = conversations.value.find(c => c.id === conversationId.value)
   if (!conversation) {
-    await navigateTo('/new')
+    await router.push('/new')
     return
   }
 
@@ -96,20 +102,4 @@ watch(conversationId, async () => {
 watch(settingsSavedAt, () => {
   stop()
 })
-
-const handleSendMessage = (message: string) => {
-  sendMessage(message)
-}
-
-const handleClear = () => {
-  clear()
-}
-
-const handleRespondPermission = (permissionId: string, response: string) => {
-  respondToPermission(permissionId, response)
-}
-
-const handleSetConfigOption = (configId: string, value: string) => {
-  setConfigOption(configId, value)
-}
 </script>

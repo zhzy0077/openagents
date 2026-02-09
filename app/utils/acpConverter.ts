@@ -11,7 +11,7 @@ import type {
   ConfigOption,
 } from '~/types/acp'
 import { isSessionUpdateNotification, isJsonRpcResponse, isJsonRpcRequest } from '~/types/acp'
-import type { ChatMessage, ChatMessagePart } from '~/types/chat'
+import type { ChatMessage, ChatMessagePart, TextPart, ThoughtPart, ToolCallPart, PermissionAskPart } from '~/types/chat'
 
 export interface AcpConverterCallbacks {
   onResponse?: (response: JsonRpcResponse) => void
@@ -22,8 +22,8 @@ export interface AcpConverterCallbacks {
 export class AcpConverter {
   private buffer = ''
   private currentMessage: ChatMessage | null = null
-  private toolCalls = new Map<string, ChatMessagePart>()
-  private permissionAsks = new Map<string, ChatMessagePart>()
+  private toolCalls = new Map<string, ToolCallPart>()
+  private permissionAsks = new Map<string, PermissionAskPart>()
   private callbacks: AcpConverterCallbacks = {}
 
   setCallbacks(callbacks: AcpConverterCallbacks): void {
@@ -52,11 +52,11 @@ export class AcpConverter {
     return this.currentMessage
   }
 
-  getToolCalls(): ChatMessagePart[] {
+  getToolCalls(): ToolCallPart[] {
     return Array.from(this.toolCalls.values())
   }
 
-  getPermissionAsks(): ChatMessagePart[] {
+  getPermissionAsks(): PermissionAskPart[] {
     return Array.from(this.permissionAsks.values())
   }
 
@@ -82,17 +82,24 @@ export class AcpConverter {
   }
 
   private handleMessage(msg: unknown): void {
-    if (isJsonRpcResponse(msg)) {
+    const isResp = isJsonRpcResponse(msg)
+    const isReq = isJsonRpcRequest(msg)
+    const isNotif = isSessionUpdateNotification(msg)
+    if (import.meta.dev) {
+      console.log('[ACP] handleMessage:', JSON.stringify(msg).slice(0, 300), { isResp, isReq, isNotif })
+    }
+
+    if (isResp) {
       this.callbacks.onResponse?.(msg)
       return
     }
 
-    if (isJsonRpcRequest(msg)) {
+    if (isReq) {
       this.handleRequest(msg)
       return
     }
 
-    if (isSessionUpdateNotification(msg)) {
+    if (isNotif) {
       this.handleSessionUpdate(msg.params.update)
     }
   }
@@ -105,7 +112,13 @@ export class AcpConverter {
         question: params.toolCall.title,
         options: params.options.map(o => ({ label: o.name, value: o.optionId })),
       }
+      if (import.meta.dev) {
+        console.log('[ACP] permission request received:', permissionAsk)
+      }
       this.handlePermissionAsk(permissionAsk)
+      if (import.meta.dev) {
+        console.log('[ACP] permissionAsks map size after handlePermissionAsk:', this.permissionAsks.size)
+      }
       this.callbacks.onPermissionRequest?.(request.id, params)
     }
   }
@@ -121,12 +134,16 @@ export class AcpConverter {
       case 'agent_thought_chunk':
         this.handleAgentThoughtChunk(update.content)
         break
-      case 'tool_call':
-        this.handleToolCallCreate(this.extractToolCall(update))
+      case 'tool_call': {
+        const toolCall = this.extractToolCall(update)
+        if (toolCall) this.handleToolCallCreate(toolCall)
         break
-      case 'tool_call_update':
-        this.handleToolCallUpdate(this.extractToolCall(update))
+      }
+      case 'tool_call_update': {
+        const toolCall = this.extractToolCall(update)
+        if (toolCall) this.handleToolCallUpdate(toolCall)
         break
+      }
       case 'permission_ask':
         this.handlePermissionAsk(update.permissionAsk)
         break
@@ -136,10 +153,14 @@ export class AcpConverter {
     }
   }
 
-  private extractToolCall(update: AcpToolCallCreate | AcpToolCallUpdate): AcpToolCall {
+  private extractToolCall(update: AcpToolCallCreate | AcpToolCallUpdate): AcpToolCall | null {
     if (update.toolCall) return update.toolCall
+    if (!update.toolCallId) {
+      console.warn('ACP tool call update missing both toolCall and toolCallId, skipping')
+      return null
+    }
     return {
-      toolCallId: update.toolCallId!,
+      toolCallId: update.toolCallId,
       title: update.title ?? '',
       kind: update.kind ?? 'other',
       status: update.status ?? 'pending',
@@ -157,17 +178,17 @@ export class AcpConverter {
         id: crypto.randomUUID(),
         role,
         content: text,
-        parts: [{ type: 'text', content: text }],
+        parts: [{ type: 'text', content: text } satisfies TextPart],
         createdAt: new Date(),
       }
     } else {
       this.currentMessage.content += text
-      const parts = (this.currentMessage.parts ?? []) as ChatMessagePart[]
+      const parts = this.currentMessage.parts ?? []
       const lastPart = parts[parts.length - 1]
       if (lastPart?.type === 'text') {
         lastPart.content += text
       } else {
-        parts.push({ type: 'text', content: text })
+        parts.push({ type: 'text', content: text } satisfies TextPart)
       }
       this.currentMessage.parts = parts
     }
@@ -177,7 +198,20 @@ export class AcpConverter {
     const text = this.extractText(content)
     if (!text) return
 
-    if (!this.currentMessage) {
+    this.ensureCurrentAssistantMessage()
+
+    const parts = this.currentMessage!.parts ?? []
+    const existingThought = parts.find((p): p is ThoughtPart => p.type === 'thought')
+    if (existingThought) {
+      existingThought.content += text
+    } else {
+      parts.push({ type: 'thought', content: text } satisfies ThoughtPart)
+    }
+    this.currentMessage!.parts = parts
+  }
+
+  private ensureCurrentAssistantMessage(): void {
+    if (!this.currentMessage || this.currentMessage.role !== 'assistant') {
       this.currentMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -186,20 +220,11 @@ export class AcpConverter {
         createdAt: new Date(),
       }
     }
-
-    const parts = (this.currentMessage.parts ?? []) as ChatMessagePart[]
-    const existingThought = parts.find(p => p.type === 'thought')
-    if (existingThought) {
-      existingThought.content += text
-    } else {
-      parts.push({ type: 'thought', content: text })
-    }
-    this.currentMessage.parts = parts
   }
 
   private handleToolCallCreate(toolCall: AcpToolCall): void {
     const contentText = toolCall.content ? this.extractTextFromContentField(toolCall.content) : ''
-    const part: ChatMessagePart = {
+    const part: ToolCallPart = {
       type: 'tool_call',
       content: contentText,
       toolCallId: toolCall.toolCallId,
@@ -210,6 +235,12 @@ export class AcpConverter {
       toolCallInput: contentText || undefined,
     }
     this.toolCalls.set(toolCall.toolCallId, part)
+
+    // Also inject into the current assistant message parts for inline rendering
+    this.ensureCurrentAssistantMessage()
+    const parts = this.currentMessage!.parts ?? []
+    parts.push(part)
+    this.currentMessage!.parts = parts
   }
 
   private handleToolCallUpdate(toolCall: AcpToolCall): void {
@@ -219,24 +250,40 @@ export class AcpConverter {
       return
     }
 
-    existing.toolCallStatus = toolCall.status
-    existing.toolCallTitle = toolCall.title
-    existing.toolCallLocations = toolCall.locations
+    // Build a replacement object instead of mutating in-place.
+    // Vue reactivity tracks object identity — mutating the same reference
+    // won't trigger re-renders when the parts array is spread-copied.
+    const updated: ToolCallPart = {
+      ...existing,
+      toolCallStatus: toolCall.status,
+      toolCallTitle: toolCall.title,
+      toolCallLocations: toolCall.locations,
+    }
 
     if (toolCall.content) {
       const newContent = this.extractTextFromContentField(toolCall.content)
       if (newContent) {
-        existing.content = newContent
+        updated.content = newContent
         // ACP reuses `content` for both input (on create) and output (on completion)
         if (toolCall.status === 'completed' || toolCall.status === 'failed') {
-          existing.toolCallOutput = newContent
+          updated.toolCallOutput = newContent
         }
+      }
+    }
+
+    this.toolCalls.set(toolCall.toolCallId, updated)
+
+    // Replace the part reference in currentMessage.parts so Vue detects the change
+    if (this.currentMessage?.parts) {
+      const idx = this.currentMessage.parts.indexOf(existing)
+      if (idx !== -1) {
+        this.currentMessage.parts[idx] = updated
       }
     }
   }
 
   private handlePermissionAsk(permissionAsk: AcpPermissionAsk): void {
-    const part: ChatMessagePart = {
+    const part: PermissionAskPart = {
       type: 'permission_ask',
       content: permissionAsk.question,
       permissionId: permissionAsk.permissionId,
@@ -245,19 +292,43 @@ export class AcpConverter {
       permissionDefaultOption: permissionAsk.defaultOption,
     }
     this.permissionAsks.set(permissionAsk.permissionId, part)
+
+    // Also inject into the current assistant message parts for inline rendering
+    this.ensureCurrentAssistantMessage()
+    const parts = this.currentMessage!.parts ?? []
+    parts.push(part)
+    this.currentMessage!.parts = parts
   }
 
   private extractText(content: AcpContentBlock): string {
     return content.type === 'text' ? content.text : ''
   }
 
-  private extractTextFromContentField(content: AcpContentBlock | AcpContentBlock[]): string {
+  private extractTextFromContentField(content: AcpContentBlock | AcpContentBlock[] | unknown): string {
     if (Array.isArray(content)) {
       return content
-        .filter(block => block.type === 'text')
-        .map(block => (block as { type: 'text'; text: string }).text)
+        .map(block => this.unwrapContentBlock(block))
+        .filter((block): block is Extract<AcpContentBlock, { type: 'text' }> => block.type === 'text')
+        .map(block => block.text)
         .join('')
     }
-    return this.extractText(content)
+    const unwrapped = this.unwrapContentBlock(content)
+    return unwrapped.type === 'text' ? unwrapped.text : ''
+  }
+
+  /**
+   * Some ACP agents (e.g. Claude Code) wrap content blocks in an extra layer:
+   *   { type: "content", content: { type: "text", text: "..." } }
+   * This unwraps that layer, returning the inner AcpContentBlock.
+   */
+  private unwrapContentBlock(block: unknown): AcpContentBlock {
+    if (
+      typeof block === 'object' && block !== null
+      && 'type' in block && (block as Record<string, unknown>).type === 'content'
+      && 'content' in block && typeof (block as Record<string, unknown>).content === 'object'
+    ) {
+      return (block as { content: AcpContentBlock }).content
+    }
+    return block as AcpContentBlock
   }
 }

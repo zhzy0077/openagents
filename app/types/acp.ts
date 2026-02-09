@@ -189,9 +189,32 @@ export interface SessionUpdateNotification {
 
 export interface InitializeResult {
   protocolVersion: number
-  agentCapabilities: Record<string, unknown>
+  agentCapabilities: AgentCapabilities
   agentInfo: { name: string; version: string }
   authMethods?: Array<{ id: string; name: string; description: string }>
+}
+
+export interface AgentCapabilities {
+  loadSession?: boolean
+  sessionCapabilities?: {
+    fork?: Record<string, never>
+    list?: Record<string, never>
+    resume?: Record<string, never>
+  }
+  [key: string]: unknown
+}
+
+export interface SessionInfo {
+  sessionId: string
+  cwd: string
+  title?: string | null
+  updatedAt?: string | null
+  _meta?: Record<string, unknown> | null
+}
+
+export interface ListSessionsResult {
+  sessions: SessionInfo[]
+  nextCursor?: string
 }
 
 export interface NewSessionResult {

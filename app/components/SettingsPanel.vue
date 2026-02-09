@@ -42,12 +42,14 @@ onMounted(() => {
 const draft = reactive({
   username: '',
   preset: '',
+  permissionMode: 'always-ask' as 'always-ask' | 'always-allow',
 })
 
 watch(open, (isOpen) => {
   if (isOpen) {
     draft.username = settings.value.username
     draft.preset = settings.value.preset
+    draft.permissionMode = settings.value.permissionMode
   }
 })
 
@@ -59,6 +61,7 @@ const handleSave = (close: () => void) => {
   update({
     username: draft.username.trim() || 'User',
     preset: draft.preset,
+    permissionMode: draft.permissionMode,
   })
   emit('saved')
   close()

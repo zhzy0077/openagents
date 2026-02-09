@@ -28,7 +28,11 @@ interface KillMessage {
 type ClientMessage = SpawnMessage | StdinMessage | KillMessage
 
 function sendMessage(peer: Peer, message: object): void {
-  peer.send(JSON.stringify(message))
+  try {
+    peer.send(JSON.stringify(message))
+  } catch {
+    // Peer already disconnected — safe to ignore
+  }
 }
 
 function sendError(peer: Peer, message: string): void {
@@ -86,7 +90,12 @@ export default defineWebSocketHandler({
     let msg: ClientMessage
 
     try {
-      msg = JSON.parse(message.text())
+      const parsed: unknown = JSON.parse(message.text())
+      if (!parsed || typeof parsed !== 'object' || !('type' in parsed)) {
+        sendError(peer, 'Missing "type" field')
+        return
+      }
+      msg = parsed as ClientMessage
     } catch {
       sendError(peer, 'Invalid JSON')
       return
@@ -103,7 +112,7 @@ export default defineWebSocketHandler({
         handleKill(peer, msg)
         break
       default:
-        sendError(peer, `Unknown message type: ${(msg as any).type}`)
+        sendError(peer, `Unknown message type: ${String((msg as Record<string, unknown>).type)}`)
     }
   },
 

@@ -10,7 +10,7 @@ export const AGENT_PRESETS: AgentPreset[] = [
   {
     id: 'claude-code',
     name: 'Claude Code',
-    description: 'Anthropic\'s Claude Code agent',
+    description: 'Anthropic\'s Claude Code agent (bundled adapter)',
     command: 'claude-code-acp',
     args: [],
   },
@@ -18,14 +18,17 @@ export const AGENT_PRESETS: AgentPreset[] = [
     id: 'opencode',
     name: 'OpenCode',
     description: 'Open-source coding agent',
-    command: 'opencode-acp',
-    args: [],
+    command: 'opencode',
+    args: ["acp"],
   },
 ]
+
+export type PermissionMode = 'always-ask' | 'always-allow'
 
 export interface AppSettings {
   preset: string
   username: string
+  permissionMode: PermissionMode
 }
 
 const STORAGE_KEY = 'app_settings'
@@ -33,6 +36,7 @@ const STORAGE_KEY = 'app_settings'
 const DEFAULT_SETTINGS: AppSettings = {
   preset: 'claude-code',
   username: 'User',
+  permissionMode: 'always-ask',
 }
 
 function getPreset(id: string): AgentPreset {
@@ -52,6 +56,9 @@ function loadFromStorage(): AppSettings {
         ? parsed.preset
         : DEFAULT_SETTINGS.preset,
       username: typeof parsed.username === 'string' ? parsed.username : DEFAULT_SETTINGS.username,
+      permissionMode: parsed.permissionMode === 'always-ask' || parsed.permissionMode === 'always-allow'
+        ? parsed.permissionMode
+        : DEFAULT_SETTINGS.permissionMode,
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

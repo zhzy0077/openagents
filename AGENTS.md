@@ -1,100 +1,106 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-08
-**Commit:** 6a882fe
+**Generated:** 2026-02-09
+**Commit:** f6d9ec5
 **Branch:** main
 
 ## OVERVIEW
 
-Chat UI for AI agents over WebSocket terminal sessions. Nuxt 4 + Vue 3.5 + TypeScript + Nuxt UI + SQLite (better-sqlite3). Parses ACP (Agent Client Protocol) JSON-RPC messages from spawned child processes.
+OpenAgents is a Nuxt 4 chat UI for ACP-compatible coding agents over WebSocket terminal sessions. Stack: Nuxt 4, Vue 3.5, Nuxt UI, TypeScript, Nitro, SQLite (better-sqlite3), optional Docker transport.
 
 ## STRUCTURE
 
 ```
 openagents/
-├── app/                    # Frontend (Nuxt auto-imports everything here)
-│   ├── components/         # ChatPanel, ChatSidebar, ConversationItem
-│   ├── composables/        # useChat, useConversations, useStorage, useTerminalWs
-│   ├── types/              # chat.ts (domain types), acp.ts (protocol types)
-│   ├── utils/              # AcpConverter (stateful parser), messageConverter (singleton)
-│   └── pages/index.vue     # Single route — dashboard with sidebar + chat panel
-├── server/                 # Nitro backend (see server/AGENTS.md)
-│   ├── api/storage/        # Generic CRUD REST endpoints for SQLite tables
-│   ├── routes/ws/          # WebSocket handler for terminal process management
-│   └── utils/              # DB connection, query builder, process manager
-└── public/                 # Static assets (favicon, robots.txt)
+|- app/
+|  |- components/      # Chat UI components
+|  |- composables/     # Session orchestration + transport state
+|  |- pages/           # `/new` and `/chat/[id]` route surfaces
+|  |- types/           # Domain + ACP protocol contracts
+|  `- utils/           # Stateful ACP stream parser
+|- server/
+|  |- api/storage/     # Dynamic table CRUD handlers
+|  |- routes/ws/       # WebSocket terminal bridge
+|  `- utils/           # DB/query/transport internals
+|- docs/screenshots/   # README screenshots
+|- test-session-load.mjs # Manual ACP integration script
+|- nuxt.config.ts
+`- package.json
 ```
 
 ## WHERE TO LOOK
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Chat message flow | `app/composables/useChat.ts` | Orchestrates WS → AcpConverter → messages |
-| ACP protocol parsing | `app/utils/acpConverter.ts` | Stateful line-buffered JSON-RPC parser |
-| ACP type definitions | `app/types/acp.ts` | JSON-RPC 2.0, session updates, type guards |
-| WebSocket connection | `app/composables/useTerminalWs.ts` | Auto-connect/reconnect, spawn/stdin/kill |
-| Conversation persistence | `app/composables/useConversations.ts` | localStorage-backed, Date serialization |
-| DB storage client | `app/composables/useStorage.ts` | Wraps `/api/storage/[table]` endpoints |
-| Server API endpoints | `server/api/storage/` | Dynamic table CRUD with schema inference |
-| Terminal WebSocket | `server/routes/ws/terminal.ts` | Process spawn, stdio piping, lifecycle |
-| Database setup | `server/utils/db/connection.ts` | SQLite singleton, WAL mode, `.data/storage.db` |
-| SQL query building | `server/utils/db/query-builder.ts` | Parameterized queries, identifier validation |
-| Process management | `server/utils/process-manager.ts` | spawn/kill/cleanup per WebSocket peer |
+| Chat/session state machine | `app/composables/useChat.ts` | ACP initialize/new/load/list/prompt orchestration |
+| Incremental ACP parsing | `app/utils/acpConverter.ts` | Line-buffered JSON-RPC parsing, tool/permission extraction |
+| Browser WS lifecycle | `app/composables/useAgentProcess.ts` | Connect/reconnect queue and spawn/stdin/kill transport messages |
+| Conversation persistence | `app/composables/useConversations.ts` | Conversation metadata CRUD via storage API |
+| Main message rendering | `app/components/ChatPanel.vue` | Streamed assistant output + interaction events |
+| Dynamic storage endpoints | `server/api/storage/[table].*.ts` | Generic CRUD with schema inference and guarded mutations |
+| WS terminal endpoint | `server/routes/ws/terminal.ts` | Per-peer process transport lifecycle |
+| SQL safety helpers | `server/utils/db/query-builder.ts` | Identifier validation + parameterized clause builders |
+| SQLite lifecycle | `server/utils/db/connection.ts` | Singleton DB open, pragmas, schema bootstrap |
+| Transport backends | `server/utils/transports/*.ts` | Local `child_process` and Docker implementations |
 
-## DATA FLOW
+## CODE MAP
 
-```
-User input → useChat.sendMessage()
-  → useTerminalWs.sendStdin() → WebSocket → server/routes/ws/terminal.ts
-  → child_process stdin
+| Symbol | Type | Location | Role |
+|--------|------|----------|------|
+| `useChat` | composable | `app/composables/useChat.ts` | Core ACP client state + request/response routing |
+| `useAgentProcess` | composable | `app/composables/useAgentProcess.ts` | Browser WebSocket transport wrapper |
+| `AcpConverter` | class | `app/utils/acpConverter.ts` | Incremental parser and message normalizer |
+| `defineWebSocketHandler` export | route handler | `server/routes/ws/terminal.ts` | WebSocket protocol endpoint |
+| `parseQueryParams` | function | `server/utils/db/query-builder.ts` | WHERE/orderBy/limit/offset parsing |
+| `getDatabase` | function | `server/utils/db/connection.ts` | Lazy singleton DB initialization |
 
-child_process stdout/stderr → WebSocket → useTerminalWs callbacks
-  → AcpConverter.process() (line-buffered JSON-RPC parsing)
-  → ChatMessage[] update → Vue reactivity → ChatPanel render
-```
+## FRONTEND CONVENTIONS
 
-## CONVENTIONS
+- Keep protocol handling in composables/utils; components render pre-shaped data only.
+- Return readonly refs from composables; mutate only internally.
+- Keep page files thin and push logic to composables.
+- Keep typed `defineProps`/`defineEmits` signatures in components.
+- Keep status-driven UI branches explicit (`connecting`, `streaming`, `ready`, `error`).
 
-- **Package manager**: pnpm only. No npm/yarn/bun.
-- **Composable exports**: Always `readonly()` refs to prevent external mutation
-- **Composable lifecycle**: Auto-connect on `onMounted`, auto-cleanup on `onUnmounted`
-- **Type safety**: Discriminated unions for message parts and ACP updates; type guards for parsing
-- **Imports**: Use `~/types/...` and `~/utils/...` aliases (Nuxt auto-resolve)
-- **Server imports**: Nitro auto-imports `defineEventHandler`, `getRouterParam`, `readBody`, `getQuery`, `createError`
-- **Component props**: Use `defineProps<Props>()` with explicit interface
-- **Component emits**: Use `defineEmits<{...}>()` with typed signatures
-- **No layouts/middleware/plugins dirs** — intentionally minimal, single-page app
+## BACKEND CONVENTIONS
+
+- Validate dynamic table names/identifiers before SQL assembly.
+- Keep SQL values parameterized (`?`) and clause generation centralized in query-builder helpers.
+- Enforce non-empty `where` in PATCH/DELETE handlers.
+- Wrap handler failures with `createError({ statusCode, message })`.
+- Keep one active transport per peer and always cleanup on close/error.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
-- Do NOT edit `.nuxt/` — auto-generated by Nuxt
-- Do NOT use `npm`, `yarn`, or `bun` — pnpm exclusively
-- Do NOT use `error: any` without re-throwing as `createError()` in server handlers
-- `AcpConverter` is stateful singleton — do NOT instantiate multiple instances
-- Server DB queries use parameterized values — NEVER interpolate user input into SQL strings
-- `_schema_registry` is a reserved table name — blocked in query-builder
+- Never edit `.nuxt/` or `.output/` artifacts.
+- Never use npm/yarn/bun; pnpm workflow only.
+- Never share one `AcpConverter` across multiple active chats.
+- Never interpolate user-provided table/column/value data into SQL strings.
+- Never bypass `validateTableName` / `validateIdentifier` for dynamic storage routes.
+- Never run PATCH/DELETE storage operations with empty `where`.
+- Never open ad-hoc SQLite handles outside `getDatabase()`.
+- Never duplicate parsing/protocol branching inside Vue templates.
 
-## UNIQUE PATTERNS
+## UNIQUE STYLES
 
-- **ACP Protocol**: Agent Client Protocol over JSON-RPC 2.0 (newline-delimited). Reference: https://agentclientprotocol.com/overview/introduction
-- **Dynamic tables**: SQLite tables auto-created on first POST via `inferSchema()` from row data
-- **WebSocket terminal**: Server spawns child processes per WS peer, pipes stdio bidirectionally
-- **Permission system**: ACP `permission_ask` updates flow through converter → UI can respond via JSON-RPC `permission/response`
+- ACP JSON-RPC messages may arrive fragmented; parser buffers by newline and finalizes streams.
+- `useChat` guards spawn/exit races with `isSpawning` to avoid stale process exits clobbering state.
+- Session title sync relies on `session/list`, not only prompt responses.
+- Storage API infers table schema on first POST for previously unseen tables.
 
 ## COMMANDS
 
 ```bash
-pnpm install          # Install dependencies
-pnpm dev              # Dev server → http://localhost:3000
-pnpm build            # Production build
-pnpm preview          # Preview production build
+pnpm install
+pnpm dev
+pnpm build
+pnpm preview
+node test-session-load.mjs
 ```
 
 ## NOTES
 
-- No test framework configured — no vitest/jest/playwright
-- No CI/CD pipeline — no GitHub Actions, Makefile, Docker
-- WebSocket endpoint hardcoded in runtime config: `ws://localhost:3000/ws/terminal`
-- Database stored at `.data/storage.db` (gitignored via `.data` in `.gitignore`)
-- WebSocket reconnects automatically after 3s on disconnect
-- `useConversations` stores data in browser localStorage (key: `chat_conversations`)
+- No automated test framework configured (manual integration script only).
+- No CI workflows in `.github/workflows`.
+- Runtime WS endpoint defaults to `ws://localhost:3000/ws/terminal` in `nuxt.config.ts`.
+- This repository uses a single AGENTS file at project root.

@@ -1,17 +1,9 @@
-import { getDatabase } from '../../utils/db/connection'
-import { validateTableName, validateIdentifier, inferSchema, createTableIfNotExists, normalizeSqlValue } from '../../utils/db/query-builder'
+import { getValidatedTable, withDatabase } from '../../utils/db/handler-helpers'
+import { validateIdentifier, inferSchema, createTableIfNotExists, normalizeSqlValue } from '../../utils/db/query-builder'
 import type { InsertResponse } from '../../utils/db/types'
 
 export default defineEventHandler(async (event): Promise<InsertResponse> => {
-  const table = getRouterParam(event, 'table')
-  if (!table) {
-    throw createError({
-      statusCode: 400,
-      message: 'Table name is required',
-    })
-  }
-
-  validateTableName(table)
+  const table = getValidatedTable(event)
 
   const body = await readBody(event)
 
@@ -26,9 +18,7 @@ export default defineEventHandler(async (event): Promise<InsertResponse> => {
     return { inserted: 0 }
   }
 
-  const db = getDatabase()
-
-  try {
+  return withDatabase((db) => {
     // Infer schema from first row and create table if needed
     const firstRow = body[0]
     const schema = inferSchema(firstRow)
@@ -54,10 +44,5 @@ export default defineEventHandler(async (event): Promise<InsertResponse> => {
     insertMany(body)
 
     return { inserted: body.length }
-  } catch (error: any) {
-    throw createError({
-      statusCode: 500,
-      message: `Database error: ${error.message}`,
-    })
-  }
+  })
 })

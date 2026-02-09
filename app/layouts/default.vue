@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen w-full bg-white overflow-hidden">
+  <div class="flex h-screen w-full bg-white dark:bg-gray-800 overflow-hidden transition-colors">
     <Transition name="fade">
       <div
         v-if="drawerOpen"
@@ -28,8 +28,8 @@
       <ChatSidebar
         :conversations="conversations"
         :active-conversation-id="activeConversationId"
-        @new-conversation="navigateTo('/new')"
-        @select-conversation="(id: string) => navigateTo(`/chat/${id}`)"
+        @new-conversation="router.push('/new')"
+        @select-conversation="(id: string) => router.push(`/chat/${id}`)"
         @delete-conversation="handleDeleteConversation"
         @open-settings="settingsOpen = true"
       />
@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
 const drawerOpen = useState<boolean>('drawer-open', () => false)
 const settingsSavedAt = useState<number>('settings-saved-at', () => 0)
 const settingsOpen = ref(false)
@@ -66,18 +67,18 @@ onMounted(async () => {
 
 const handleNewConversation = async () => {
   drawerOpen.value = false
-  await navigateTo('/new')
+  await router.push('/new')
 }
 
 const handleSelectConversation = async (id: string) => {
   drawerOpen.value = false
-  await navigateTo(`/chat/${id}`)
+  await router.push(`/chat/${id}`)
 }
 
 const handleDeleteConversation = async (id: string) => {
   await deleteConversation(id)
   if (activeConversationId.value === id) {
-    await navigateTo('/new')
+    await router.push('/new')
   }
 }
 

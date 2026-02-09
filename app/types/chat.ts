@@ -2,31 +2,62 @@ export type ChatRole = 'user' | 'assistant' | 'system'
 
 export type ChatStatus = 'ready' | 'connecting' | 'streaming' | 'error'
 
-export interface ChatMessagePart {
-  type: 'text' | 'code' | 'image' | 'tool_call' | 'thought' | 'permission_ask'
+export interface TextPart {
+  type: 'text'
+  content: string
+}
+
+export interface CodePart {
+  type: 'code'
   content: string
   language?: string
-  // Tool call fields
-  toolCallId?: string
-  toolCallTitle?: string
-  toolCallKind?: string
-  toolCallStatus?: 'pending' | 'in_progress' | 'completed' | 'failed'
+}
+
+export interface ImagePart {
+  type: 'image'
+  content: string
+}
+
+export interface ThoughtPart {
+  type: 'thought'
+  content: string
+}
+
+export interface ToolCallPart {
+  type: 'tool_call'
+  content: string
+  toolCallId: string
+  toolCallTitle: string
+  toolCallKind: string
+  toolCallStatus: 'pending' | 'in_progress' | 'completed' | 'failed'
   toolCallLocations?: readonly string[]
   toolCallInput?: string
   toolCallOutput?: string
-  // Permission ask fields
-  permissionId?: string
-  permissionQuestion?: string
+}
+
+export interface PermissionAskPart {
+  type: 'permission_ask'
+  content: string
+  permissionId: string
+  permissionQuestion: string
   permissionOptions?: ReadonlyArray<{ label: string; value: string }>
   permissionDefaultOption?: string
   permissionResponse?: string
 }
 
+export type ChatMessagePart =
+  | TextPart
+  | CodePart
+  | ImagePart
+  | ThoughtPart
+  | ToolCallPart
+  | PermissionAskPart
+
 export interface ChatMessage {
   id: string
   role: ChatRole
   content: string
-  parts?: readonly ChatMessagePart[]
+  parts?: ChatMessagePart[]
   createdAt: Date
 }
 
@@ -50,5 +81,3 @@ export interface TerminalMessage {
   code?: number | null
   signal?: string
 }
-
-export type MessageConverter = (stdio: string) => string

@@ -1,6 +1,7 @@
 import Docker from 'dockerode'
 import { PassThrough } from 'node:stream'
 import type { ProcessTransport, TransportFactory, TransportOptions, TransportCallbacks } from './types'
+import { createTransportManager } from './base-factory'
 
 const CONTAINER_WORKDIR = '/workspace'
 
@@ -19,7 +20,7 @@ class DockerProcessTransport implements ProcessTransport {
   }
 
   write(data: string): void {
-    if (this.state.destroyed) return
+    if (this.state.destroyed || !this.state.stream) return
     try {
       this.state.stream.write(data)
     } catch {
@@ -43,6 +44,7 @@ class DockerProcessTransport implements ProcessTransport {
 
 const docker = new Docker()
 const transports = new Map<string, DockerProcessTransport>()
+const manager = createTransportManager(transports)
 
 export const dockerTransportFactory: TransportFactory = {
   create(
@@ -52,7 +54,7 @@ export const dockerTransportFactory: TransportFactory = {
     callbacks: TransportCallbacks
   ): ProcessTransport {
     if (transports.has(peerId)) {
-      dockerTransportFactory.cleanup(peerId)
+      manager.cleanup(peerId)
     }
 
     const { args = [], cwd, env, image } = options
@@ -85,22 +87,15 @@ export const dockerTransportFactory: TransportFactory = {
   },
 
   get(peerId: string): ProcessTransport | undefined {
-    return transports.get(peerId)
+    return manager.get(peerId)
   },
 
   kill(peerId: string, signal?: string): boolean {
-    const transport = transports.get(peerId)
-    if (!transport) return false
-    transport.kill(signal)
-    transports.delete(peerId)
-    return true
+    return manager.kill(peerId, signal)
   },
 
   cleanup(peerId: string): void {
-    const transport = transports.get(peerId)
-    if (!transport) return
-    transport.destroy()
-    transports.delete(peerId)
+    manager.cleanup(peerId)
   }
 }
 

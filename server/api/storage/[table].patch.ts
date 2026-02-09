@@ -1,17 +1,9 @@
-import { getDatabase } from '../../utils/db/connection'
-import { validateTableName, validateIdentifier, buildWhereClause, normalizeSqlValue } from '../../utils/db/query-builder'
+import { getValidatedTable, validateWhereClause, withDatabase } from '../../utils/db/handler-helpers'
+import { validateIdentifier, buildWhereClause, normalizeSqlValue } from '../../utils/db/query-builder'
 import type { UpdateRequest, UpdateResponse } from '../../utils/db/types'
 
 export default defineEventHandler(async (event): Promise<UpdateResponse> => {
-  const table = getRouterParam(event, 'table')
-  if (!table) {
-    throw createError({
-      statusCode: 400,
-      message: 'Table name is required',
-    })
-  }
-
-  validateTableName(table)
+  const table = getValidatedTable(event)
 
   const body = await readBody<UpdateRequest>(event)
 
@@ -22,17 +14,9 @@ export default defineEventHandler(async (event): Promise<UpdateResponse> => {
     })
   }
 
-  if (!body.where || typeof body.where !== 'object' || Object.keys(body.where).length === 0) {
-    throw createError({
-      statusCode: 400,
-      message: 'Request body must include non-empty "where" clause',
-    })
-  }
+  validateWhereClause(body.where)
 
-  const db = getDatabase()
-
-  try {
-    // Build UPDATE query
+  return withDatabase((db) => {
     const setColumns = Object.keys(body.data)
     setColumns.forEach(validateIdentifier)
 
@@ -48,10 +32,5 @@ export default defineEventHandler(async (event): Promise<UpdateResponse> => {
     const result = stmt.run(...params)
 
     return { changes: result.changes }
-  } catch (error: any) {
-    throw createError({
-      statusCode: 500,
-      message: `Database error: ${error.message}`,
-    })
-  }
+  })
 })

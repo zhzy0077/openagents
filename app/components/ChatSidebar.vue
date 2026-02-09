@@ -1,20 +1,20 @@
 <template>
-  <div class="flex flex-col w-full md:w-[280px] shrink-0 h-full bg-[#F9FAFB]">
+  <div class="flex flex-col w-full md:w-[280px] shrink-0 h-full bg-[#F9FAFB] dark:bg-gray-900 transition-colors">
     <!-- New Chat Button -->
     <div class="p-3">
       <button
-        class="w-full h-10 bg-white border border-[#E5E7EB] rounded-lg flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors text-sm font-medium"
+        class="w-full h-10 bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 rounded-lg flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
         @click="$emit('new-conversation')"
       >
-        <UIcon name="i-lucide-plus" class="w-4 h-4 text-gray-900" />
-        <span class="text-sm font-medium text-gray-900">New chat</span>
+        <UIcon name="i-lucide-plus" class="w-4 h-4 text-gray-900 dark:text-gray-50" />
+        <span class="text-sm font-medium text-gray-900 dark:text-gray-50">New chat</span>
       </button>
     </div>
 
     <!-- Threads Section -->
     <div class="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1">
       <div v-for="(conversations, label) in groupedConversations" :key="label" class="flex flex-col gap-1">
-        <div class="text-xs font-medium text-gray-500 px-3 py-1">{{ label }}</div>
+        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-1">{{ label }}</div>
         <ConversationItem
           v-for="conversation in conversations"
           :key="conversation.id"
@@ -27,13 +27,13 @@
     </div>
 
     <!-- Footer -->
-    <div class="p-3 flex flex-col gap-1 border-t border-[#E5E7EB]">
+    <div class="p-3 flex flex-col gap-1 border-t border-[#E5E7EB] dark:border-gray-800">
       <!-- User Profile -->
-      <div class="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[#E5E7EB] rounded-md transition-colors h-auto" @click="$emit('open-settings')">
-        <div class="w-8 h-8 rounded-full bg-[#E0E7FF] flex items-center justify-center text-[#4F46E5] text-xs font-semibold">
+      <div class="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[#E5E7EB] dark:hover:bg-gray-800 rounded-md transition-colors h-auto" @click="$emit('open-settings')">
+        <div class="w-8 h-8 rounded-full bg-[#E0E7FF] dark:bg-indigo-900 flex items-center justify-center text-[#4F46E5] dark:text-indigo-200 text-xs font-semibold">
           {{ userInitials }}
         </div>
-        <span class="text-[14px] font-medium text-[#111827] flex-1 truncate">{{ settings.username }}</span>
+        <span class="text-[14px] font-medium text-[#111827] dark:text-gray-50 flex-1 truncate">{{ settings.username }}</span>
       </div>
     </div>
   </div>

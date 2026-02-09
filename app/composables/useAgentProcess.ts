@@ -1,7 +1,7 @@
 import type { TerminalMessage } from '~/types/chat'
 import { AGENT_PRESETS } from '~/composables/useSettings'
 
-export interface UseProcessOptions {
+export interface UseAgentProcessOptions {
   autoSpawn?: boolean
   onSpawned?: (pid: number) => void
   onStdout?: (data: string) => void
@@ -10,7 +10,7 @@ export interface UseProcessOptions {
   onError?: (error: Error) => void
 }
 
-export function useProcess(options: UseProcessOptions = {}) {
+export function useAgentProcess(options: UseAgentProcessOptions = {}) {
   const config = useRuntimeConfig()
   const { activePreset } = useSettings()
   const ws = ref<WebSocket | null>(null)

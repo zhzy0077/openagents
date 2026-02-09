@@ -10,10 +10,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxt/eslint": "1.14.0",
+    "@iconify-json/lucide": "^1.2.19",
     "@nuxt/ui": "4.4.0",
+    "@zed-industries/claude-code-acp": "^0.16.0",
     "better-sqlite3": "^12.6.2",
     "dockerode": "^4.0.9",
+    "dompurify": "^3.3.1",
+    "marked": "^17.0.1",
     "nuxt": "^4.3.0",
     "tailwindcss": "^4.1.18",
     "vue": "^3.5.27",
@@ -21,7 +24,6 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/dockerode": "^4.0.1",
-    "ws": "^8.19.0"
+    "@types/dockerode": "^4.0.1"
   }
 }

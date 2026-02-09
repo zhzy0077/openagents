@@ -1,4 +1,5 @@
 import type { WhereClause, SelectOptions } from './types'
+import type Database from 'better-sqlite3'
 
 const IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 const RESERVED_TABLES = ['_schema_registry']
@@ -61,9 +62,17 @@ export function parseQueryParams(query: Record<string, unknown>): SelectOptions 
     if (key === 'orderBy') {
       options.orderBy = String(value)
     } else if (key === 'limit') {
-      options.limit = Number(value)
+      const num = Number(value)
+      if (!Number.isFinite(num) || num < 0 || !Number.isInteger(num)) {
+        throw new Error('Invalid limit: must be a non-negative integer')
+      }
+      options.limit = num
     } else if (key === 'offset') {
-      options.offset = Number(value)
+      const num = Number(value)
+      if (!Number.isFinite(num) || num < 0 || !Number.isInteger(num)) {
+        throw new Error('Invalid offset: must be a non-negative integer')
+      }
+      options.offset = num
     } else {
       // All other params are WHERE conditions (equality only)
       where[key] = value as string | number | boolean | null
@@ -100,11 +109,11 @@ export function buildOrderByClause(orderBy?: string): string {
 }
 
 export function buildLimitClause(limit?: number, offset?: number): string {
-  let sql = ''
-
-  if (limit !== undefined && limit > 0) {
-    sql += ` LIMIT ${limit}`
+  if (limit === undefined || limit <= 0) {
+    return ''
   }
+
+  let sql = ` LIMIT ${limit}`
 
   if (offset !== undefined && offset > 0) {
     sql += ` OFFSET ${offset}`
@@ -134,7 +143,7 @@ export function inferSchema(data: Record<string, unknown>): Map<string, string> 
   return schema
 }
 
-export function createTableIfNotExists(db: any, table: string, schema: Map<string, string>): void {
+export function createTableIfNotExists(db: Database.Database, table: string, schema: Map<string, string>): void {
   const columns = Array.from(schema.entries())
     .map(([name, type]) => `${name} ${type}`)
     .join(', ')

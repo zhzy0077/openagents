@@ -16,6 +16,7 @@ interface ConversationRow {
 
 const DEFAULT_PRESET_ID = AGENT_PRESETS[0]?.id ?? 'claude-code'
 const DEFAULT_CWD = '.'
+const DEFAULT_TITLE = 'New Chat'
 
 function conversationFromRow(row: ConversationRow): Conversation {
   return {
@@ -52,7 +53,7 @@ export function useConversations() {
     const now = new Date()
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
-      title: params.title ?? 'New Chat',
+      title: params.title ?? DEFAULT_TITLE,
       messages: [],
       presetId: params.presetId,
       cwd: params.cwd,
@@ -88,6 +89,24 @@ export function useConversations() {
     }
   }
 
+  const syncConversationTitleFromSession = async (id: string, title: string) => {
+    const normalizedTitle = title.trim()
+    if (!normalizedTitle) {
+      return
+    }
+
+    const conversation = conversations.value.find(c => c.id === id)
+    if (!conversation) {
+      return
+    }
+
+    if (conversation.title === normalizedTitle) {
+      return
+    }
+
+    await updateConversation(id, { title: normalizedTitle })
+  }
+
   const deleteConversation = async (id: string) => {
     await remove('conversations', { id })
 
@@ -100,6 +119,7 @@ export function useConversations() {
     loadConversations,
     createConversation,
     updateConversation,
+    syncConversationTitleFromSession,
     deleteConversation,
   }
 }
