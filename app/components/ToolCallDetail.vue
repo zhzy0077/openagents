@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ToolCallPart } from '~/types/chat'
+import type { ToolCallPart } from '#shared/types/chat'
 
 interface Props {
   toolCall: ToolCallPart

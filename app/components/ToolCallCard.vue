@@ -14,7 +14,7 @@
        {{ toolCall.toolCallInput || toolCall.content }}
     </div>
 
-    <div class="h-px bg-[#E5E7EB] dark:bg-gray-700 w-full my-1"></div>
+    <div class="h-px bg-[#E5E7EB] dark:bg-gray-700 w-full my-1"/>
 
     <div v-if="toolCall.toolCallStatus === 'completed'" class="text-xs text-[#059669] dark:text-[#10A37F] mt-1">
       ✓ Completed
@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ToolCallPart } from '~/types/chat'
+import type { ToolCallPart } from '#shared/types/chat'
 
 interface Props {
   toolCall: ToolCallPart

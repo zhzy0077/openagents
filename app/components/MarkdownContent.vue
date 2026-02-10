@@ -15,6 +15,7 @@ const parsedContent = computed(() => {
 
 <template>
   <ClientOnly>
-    <div class="markdown-content" v-html="parsedContent"></div>
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <div class="markdown-content" v-html="parsedContent"/>
   </ClientOnly>
 </template>

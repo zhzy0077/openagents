@@ -57,15 +57,13 @@
         <div class="w-full flex flex-col gap-2">
           <label class="text-[13px] font-semibold text-[#374151] dark:text-gray-300">Working Directory</label>
           <div class="flex items-center gap-2.5 w-full h-[44px] bg-white dark:bg-gray-800 rounded-lg border border-[#D1D5DB] dark:border-gray-700 px-3.5 focus-within:ring-2 focus-within:ring-[#10A37F] focus-within:border-transparent transition-all">
-            <UIcon name="i-lucide-folder" class="w-4 h-4 text-[#6B7280] dark:text-gray-400 shrink-0" />
             <input
               v-model="cwd"
               type="text"
               placeholder="/home/user/projects"
               class="flex-1 bg-transparent border-none outline-none text-sm text-[#111827] dark:text-gray-50 placeholder:text-[#9CA3AF] min-w-0"
               @keydown.enter.prevent="handleStart"
-            />
-            <span class="text-[#10A37F] text-[13px] font-medium cursor-pointer shrink-0">Browse</span>
+            >
           </div>
         </div>
 
@@ -96,6 +94,13 @@ const { settings } = useSettings()
 
 const selectedPreset = ref(settings.value.preset)
 const cwd = ref('')
+
+// Sync from settings after client-side hydration (localStorage unavailable on server)
+onMounted(() => {
+  if (settings.value.defaultCwd && !cwd.value) {
+    cwd.value = settings.value.defaultCwd
+  }
+})
 
 const handleStart = () => {
   if (!cwd.value.trim()) return

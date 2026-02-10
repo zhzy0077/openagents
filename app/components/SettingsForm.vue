@@ -15,21 +15,26 @@
         class="w-full"
       />
     </UFormField>
+
+    <UFormField label="Default Working Directory">
+      <UInput
+        v-model="draft.defaultCwd"
+        placeholder="/home/user/projects"
+        class="w-full"
+      />
+    </UFormField>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { PermissionMode } from '~/composables/useSettings'
 
-interface Props {
-  draft: {
-    username: string
-    preset: string
-    permissionMode: PermissionMode
-  }
-}
-
-defineProps<Props>()
+const draft = defineModel<{
+  username: string
+  preset: string
+  permissionMode: PermissionMode
+  defaultCwd: string
+}>('draft', { required: true })
 
 const permissionModeOptions = [
   { label: 'Always ask', value: 'always-ask' },

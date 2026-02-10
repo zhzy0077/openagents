@@ -93,6 +93,7 @@ openagents/
 ```bash
 pnpm install
 pnpm dev
+pnpm lint          # Verify after changes — no need to run pnpm build
 pnpm build
 pnpm preview
 node test-session-load.mjs

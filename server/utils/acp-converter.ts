@@ -9,9 +9,9 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   ConfigOption,
-} from '~/types/acp'
-import { isSessionUpdateNotification, isJsonRpcResponse, isJsonRpcRequest } from '~/types/acp'
-import type { ChatMessage, ChatMessagePart, TextPart, ThoughtPart, ToolCallPart, PermissionAskPart } from '~/types/chat'
+} from '#shared/types/acp'
+import { isSessionUpdateNotification, isJsonRpcResponse, isJsonRpcRequest } from '#shared/types/acp'
+import type { ChatMessage, TextPart, ThoughtPart, ToolCallPart, PermissionAskPart } from '#shared/types/chat'
 
 export interface AcpConverterCallbacks {
   onResponse?: (response: JsonRpcResponse) => void
@@ -21,6 +21,7 @@ export interface AcpConverterCallbacks {
 
 export class AcpConverter {
   private buffer = ''
+  private messages: ChatMessage[] = []
   private currentMessage: ChatMessage | null = null
   private toolCalls = new Map<string, ToolCallPart>()
   private permissionAsks = new Map<string, PermissionAskPart>()
@@ -52,6 +53,12 @@ export class AcpConverter {
     return this.currentMessage
   }
 
+  getMessages(): ChatMessage[] {
+    return this.currentMessage
+      ? [...this.messages, this.currentMessage]
+      : [...this.messages]
+  }
+
   getToolCalls(): ToolCallPart[] {
     return Array.from(this.toolCalls.values())
   }
@@ -62,15 +69,29 @@ export class AcpConverter {
 
   reset(): void {
     this.buffer = ''
+    this.messages = []
     this.currentMessage = null
     this.toolCalls.clear()
     this.permissionAsks.clear()
   }
 
+  /**
+   * Push the in-progress currentMessage (if any) into the finalized messages
+   * array so the next turn starts with a fresh message. Called between prompt
+   * turns when a JSON-RPC response signals end-of-turn.
+   */
+  finalizeCurrentMessage(): void {
+    if (this.currentMessage) {
+      this.messages.push(this.currentMessage)
+      this.currentMessage = null
+    }
+  }
+
   finalize(): ChatMessage | null {
-    const msg = this.currentMessage
-    this.currentMessage = null
-    return msg
+    this.finalizeCurrentMessage()
+    const all = this.messages
+    this.messages = []
+    return all[all.length - 1] ?? null
   }
 
   respondToPermission(permissionId: string, response: string): void {
@@ -174,6 +195,9 @@ export class AcpConverter {
     if (!text) return
 
     if (!this.currentMessage || this.currentMessage.role !== role) {
+      if (this.currentMessage) {
+        this.messages.push(this.currentMessage)
+      }
       this.currentMessage = {
         id: crypto.randomUUID(),
         role,
@@ -212,6 +236,9 @@ export class AcpConverter {
 
   private ensureCurrentAssistantMessage(): void {
     if (!this.currentMessage || this.currentMessage.role !== 'assistant') {
+      if (this.currentMessage) {
+        this.messages.push(this.currentMessage)
+      }
       this.currentMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -223,6 +250,14 @@ export class AcpConverter {
   }
 
   private handleToolCallCreate(toolCall: AcpToolCall): void {
+    // If a tool_call with this ID already exists, treat as an update instead
+    // of creating a duplicate. Some agents (e.g. OpenCode) send multiple
+    // tool_call (create) notifications for the same toolCallId.
+    if (this.toolCalls.has(toolCall.toolCallId)) {
+      this.handleToolCallUpdate(toolCall)
+      return
+    }
+
     const contentText = toolCall.content ? this.extractTextFromContentField(toolCall.content) : ''
     const part: ToolCallPart = {
       type: 'tool_call',
@@ -236,7 +271,7 @@ export class AcpConverter {
     }
     this.toolCalls.set(toolCall.toolCallId, part)
 
-    // Also inject into the current assistant message parts for inline rendering
+    // Inject into the current assistant message parts for inline rendering
     this.ensureCurrentAssistantMessage()
     const parts = this.currentMessage!.parts ?? []
     parts.push(part)
@@ -251,8 +286,7 @@ export class AcpConverter {
     }
 
     // Build a replacement object instead of mutating in-place.
-    // Vue reactivity tracks object identity — mutating the same reference
-    // won't trigger re-renders when the parts array is spread-copied.
+    // Immutable replacement keeps state predictable for serialization.
     const updated: ToolCallPart = {
       ...existing,
       toolCallStatus: toolCall.status,
@@ -273,7 +307,7 @@ export class AcpConverter {
 
     this.toolCalls.set(toolCall.toolCallId, updated)
 
-    // Replace the part reference in currentMessage.parts so Vue detects the change
+    // Replace the part reference in currentMessage.parts
     if (this.currentMessage?.parts) {
       const idx = this.currentMessage.parts.indexOf(existing)
       if (idx !== -1) {
@@ -293,7 +327,7 @@ export class AcpConverter {
     }
     this.permissionAsks.set(permissionAsk.permissionId, part)
 
-    // Also inject into the current assistant message parts for inline rendering
+    // Inject into the current assistant message parts for inline rendering
     this.ensureCurrentAssistantMessage()
     const parts = this.currentMessage!.parts ?? []
     parts.push(part)

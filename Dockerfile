@@ -26,7 +26,10 @@ COPY . .
 RUN pnpm build
 
 # Drop devDependencies before copying to runtime stage
-RUN pnpm prune --prod
+# --ignore-scripts: build is done, skip postinstall (nuxt prepare) which
+# would fail loading dev-only modules like @nuxt/eslint
+RUN pnpm prune --prod --ignore-scripts \
+    && pnpm rebuild better-sqlite3
 
 # ---- runtime stage ----
 FROM debian:trixie-slim

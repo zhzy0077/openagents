@@ -1,32 +1,24 @@
 import { readonly } from 'vue'
 import { useState } from '#imports'
-import type { Conversation } from '../types/chat'
+import type { Conversation } from '#shared/types/chat'
 import { AGENT_PRESETS } from './useSettings'
 import { useStorage } from './useStorage'
 
 interface ConversationRow {
   id: string
   title: string
-  presetId?: string
-  cwd?: string
-  sessionId?: string | null
-  createdAt: string
+  preset?: string
   updatedAt: string
 }
 
 const DEFAULT_PRESET_ID = AGENT_PRESETS[0]?.id ?? 'claude-code'
-const DEFAULT_CWD = '.'
 const DEFAULT_TITLE = 'New Chat'
 
 function conversationFromRow(row: ConversationRow): Conversation {
   return {
     id: row.id,
     title: row.title,
-    messages: [],
-    presetId: typeof row.presetId === 'string' ? row.presetId : DEFAULT_PRESET_ID,
-    cwd: typeof row.cwd === 'string' && row.cwd.length > 0 ? row.cwd : DEFAULT_CWD,
-    sessionId: typeof row.sessionId === 'string' && row.sessionId.length > 0 ? row.sessionId : null,
-    createdAt: new Date(row.createdAt),
+    preset: typeof row.preset === 'string' ? row.preset : DEFAULT_PRESET_ID,
     updatedAt: new Date(row.updatedAt),
   }
 }
@@ -49,26 +41,19 @@ export function useConversations() {
     loaded.value = true
   }
 
-  const createConversation = async (params: { title?: string; presetId: string; cwd: string }): Promise<Conversation> => {
+  const createConversation = async (params: { id: string; title?: string; preset: string }): Promise<Conversation> => {
     const now = new Date()
     const newConversation: Conversation = {
-      id: crypto.randomUUID(),
+      id: params.id,
       title: params.title ?? DEFAULT_TITLE,
-      messages: [],
-      presetId: params.presetId,
-      cwd: params.cwd,
-      sessionId: null,
-      createdAt: now,
+      preset: params.preset,
       updatedAt: now,
     }
 
     await insert('conversations', [{
       id: newConversation.id,
       title: newConversation.title,
-      presetId: newConversation.presetId,
-      cwd: newConversation.cwd,
-      sessionId: null,
-      createdAt: now.toISOString(),
+      preset: newConversation.preset,
       updatedAt: now.toISOString(),
     }])
 
@@ -76,7 +61,7 @@ export function useConversations() {
     return newConversation
   }
 
-  const updateConversation = async (id: string, updates: Partial<Pick<Conversation, 'title' | 'presetId' | 'cwd' | 'sessionId'>>) => {
+  const updateConversation = async (id: string, updates: Partial<Pick<Conversation, 'title'>> = {}) => {
     const now = new Date()
     await update('conversations', {
       ...updates,

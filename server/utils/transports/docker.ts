@@ -23,8 +23,7 @@ class DockerProcessTransport implements ProcessTransport {
     if (this.state.destroyed || !this.state.stream) return
     try {
       this.state.stream.write(data)
-    } catch {
-    }
+    } catch { /* write to destroyed stream — safe to ignore */ }
   }
 
   kill(signal?: string): boolean {

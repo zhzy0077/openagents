@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Conversation } from '~/types/chat'
+import type { Conversation } from '#shared/types/chat'
 
 interface Props {
   conversation: Conversation

@@ -3136,6 +3136,56 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eF8TB",
+                      "name": "defaultCwdGroup",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FKdOZ",
+                          "name": "cwdLabel",
+                          "fill": "#374151",
+                          "content": "Default Working Directory",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s5zE9",
+                          "name": "cwdInput",
+                          "width": "fill_container",
+                          "height": 40,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#D1D5DB"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "2P6t6",
+                              "name": "cwdValue",
+                              "fill": "#111827",
+                              "content": "/home/user/projects",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -3860,16 +3910,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon_font",
-                              "id": "EVzwW",
-                              "name": "cwdIcon",
-                              "width": 16,
-                              "height": 16,
-                              "iconFontName": "folder",
-                              "iconFontFamily": "lucide",
-                              "fill": "#6B7280"
-                            },
-                            {
                               "type": "text",
                               "id": "2xHx2",
                               "name": "cwdPath",
@@ -3878,16 +3918,6 @@
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "xpOHE",
-                              "name": "cwdBrowse",
-                              "fill": "#10A37F",
-                              "content": "Browse",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
                             }
                           ]
                         }
@@ -7070,6 +7100,56 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LgAoP",
+                      "name": "defaultCwdGroup",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UyonM",
+                          "name": "cwdLabel",
+                          "fill": "#9CA3AF",
+                          "content": "Default Working Directory",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fIpw7",
+                          "name": "cwdInput",
+                          "width": "fill_container",
+                          "height": 40,
+                          "fill": "#1F2937",
+                          "cornerRadius": 6,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#374151"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "3bGxE",
+                              "name": "cwdValue",
+                              "fill": "#F9FAFB",
+                              "content": "/home/user/projects",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -7794,16 +7874,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon_font",
-                              "id": "XgCdA",
-                              "name": "cwdIcon",
-                              "width": 16,
-                              "height": 16,
-                              "iconFontName": "folder",
-                              "iconFontFamily": "lucide",
-                              "fill": "#9CA3AF"
-                            },
-                            {
                               "type": "text",
                               "id": "OKtJi",
                               "name": "cwdPath",
@@ -7812,16 +7882,6 @@
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "hleXp",
-                              "name": "cwdBrowse",
-                              "fill": "#10A37F",
-                              "content": "Browse",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
                             }
                           ]
                         }

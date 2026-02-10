@@ -7,7 +7,9 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.19",
@@ -23,7 +25,10 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@nuxt/eslint": "^1.14.0",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/dockerode": "^4.0.1"
+    "@types/dockerode": "^4.0.1",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3"
   }
 }

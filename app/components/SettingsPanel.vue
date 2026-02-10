@@ -43,6 +43,7 @@ const draft = reactive({
   username: '',
   preset: '',
   permissionMode: 'always-ask' as 'always-ask' | 'always-allow',
+  defaultCwd: '',
 })
 
 watch(open, (isOpen) => {
@@ -50,6 +51,7 @@ watch(open, (isOpen) => {
     draft.username = settings.value.username
     draft.preset = settings.value.preset
     draft.permissionMode = settings.value.permissionMode
+    draft.defaultCwd = settings.value.defaultCwd
   }
 })
 
@@ -62,6 +64,7 @@ const handleSave = (close: () => void) => {
     username: draft.username.trim() || 'User',
     preset: draft.preset,
     permissionMode: draft.permissionMode,
+    defaultCwd: draft.defaultCwd.trim(),
   })
   emit('saved')
   close()

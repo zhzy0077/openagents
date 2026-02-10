@@ -112,7 +112,7 @@
                      />
                    </div>
                    <div v-else class="text-sm text-gray-500 dark:text-gray-400">
-                     {{ part.permissionResponse === 'yes' ? 'Allowed' : 'Denied' }}
+                     {{ part.permissionResponse?.includes('reject') || part.permissionResponse?.includes('deny') ? 'Denied' : 'Allowed' }}
                    </div>
                 </div>
 
@@ -133,9 +133,9 @@
         <div v-if="showTypingIndicator" class="flex gap-3 px-4 md:px-6 w-full">
           <div class="hidden md:flex w-8 h-8 rounded bg-[#10A37F] shrink-0 items-center justify-center text-white text-xs font-medium">AI</div>
           <div class="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 md:bg-transparent md:border-none md:p-0 md:rounded-none flex items-center gap-1">
-            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"></div>
-            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce typing-dot-2"></div>
-            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce typing-dot-3"></div>
+            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"/>
+            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce typing-dot-2"/>
+            <div class="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce typing-dot-3"/>
           </div>
         </div>
         </template>
@@ -149,15 +149,14 @@
             placeholder="Send a message..."
             :rows="1"
             autoresize
-            :disabled="status === 'streaming' || status === 'connecting'"
             variant="none"
             class="w-full bg-transparent border-none focus:ring-0 p-0 text-sm text-gray-900 dark:text-gray-50 placeholder:text-gray-500 dark:placeholder:text-gray-400"
             @keydown.enter.exact.prevent="handleSend"
           />
         </div>
         
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between gap-4 min-h-[28px]">
+          <div class="flex items-center gap-2 min-h-[28px]">
             <UDropdownMenu v-if="modeOption" :items="modeItems" :ui="{ content: 'max-h-56 overflow-y-auto' }">
               <button class="bg-[#F3F4F6] dark:bg-gray-700 rounded-md px-2 py-1.5 text-xs font-medium text-[#374151] dark:text-gray-300 flex items-center gap-1 hover:bg-[#E5E7EB] dark:hover:bg-gray-600 transition-colors">
                 <span class="font-medium">Agent:</span>
@@ -200,8 +199,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatMessage, ChatStatus, ChatMessagePart, ToolCallPart } from '~/types/chat'
-import type { ConfigOption } from '~/types/acp'
+import type { ChatMessage, ChatStatus, ChatMessagePart, ToolCallPart } from '#shared/types/chat'
+import type { ConfigOption } from '#shared/types/acp'
 
 type DetailView =
   | { type: 'tool_call'; part: ToolCallPart }
@@ -248,8 +247,10 @@ const localInput = computed({
   set: (value: string) => emit('update:input', value)
 })
 
+const inputDisabled = computed(() => props.status === 'streaming' || props.status === 'connecting')
+
 const handleSend = () => {
-  if (localInput.value.trim() && props.status !== 'streaming') {
+  if (localInput.value.trim() && !inputDisabled.value) {
     emit('send', localInput.value)
   }
 }

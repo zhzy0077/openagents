@@ -64,11 +64,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: string
   title: string
-  messages: readonly ChatMessage[]
-  presetId: string
-  cwd: string
-  sessionId: string | null
-  createdAt: Date
+  preset: string
   updatedAt: Date
 }
 

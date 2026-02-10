@@ -78,7 +78,7 @@ const handleSelectConversation = async (id: string) => {
 const handleDeleteConversation = async (id: string) => {
   await deleteConversation(id)
   if (activeConversationId.value === id) {
-    await router.push('/new')
+  await router.push('/new')
   }
 }
 

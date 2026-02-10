@@ -1,22 +1,19 @@
 <template>
   <NewThreadPanel
-    @start="handleStartThread"
+    @start="handleStart"
     @open-drawer="drawerOpen = true"
   />
 </template>
 
 <script setup lang="ts">
-useHead({
-  title: 'New Thread - OpenAgents',
-})
-
 const router = useRouter()
 const drawerOpen = useState<boolean>('drawer-open', () => false)
+const pendingSession = useState<{ preset: string; cwd: string } | null>('pending-session', () => null)
 
-const { createConversation } = useConversations()
+useHead({ title: 'New Thread - OpenAgents' })
 
-const handleStartThread = async (presetId: string, cwd: string) => {
-  const newConversation = await createConversation({ presetId, cwd })
-  await router.push(`/chat/${newConversation.id}`)
+const handleStart = (presetId: string, cwd: string) => {
+  pendingSession.value = { preset: presetId, cwd }
+  router.push('/chat/new')
 }
 </script>

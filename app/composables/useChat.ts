@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatStatus, ToolCallPart, PermissionAskPart } from '~/types/chat'
+import type { ChatMessage, ChatStatus, ToolCallPart, PermissionAskPart } from '#shared/types/chat'
 import type {
   JsonRpcResponse,
   NewSessionResult,
@@ -6,15 +6,14 @@ import type {
   InitializeResult,
   ListSessionsResult,
   SessionInfo,
-  AcpPermissionRequestParams,
-} from '~/types/acp'
-import { AcpConverter } from '~/utils/acpConverter'
+} from '#shared/types/acp'
 
 export interface UseChatOptions {
   onUserMessage?: (message: ChatMessage) => void
   onAssistantMessage?: (message: ChatMessage) => void
   onSessionReady?: (sessionId: string) => void
   onSessionTitle?: (sessionId: string, title: string) => void
+  onSessionLoadError?: (sessionId: string, error: string) => void
 }
 
 interface ChatStartOptions {
@@ -83,7 +82,8 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   const toolCalls = ref<ToolCallPart[]>([])
   const permissionAsks = ref<PermissionAskPart[]>([])
   const configOptions = ref<ConfigOption[]>([])
-  const acpConverter = new AcpConverter()
+  const toolCallsMap = new Map<string, ToolCallPart>()
+  const permissionAsksMap = new Map<string, PermissionAskPart>()
   let nextRequestId = 1
   let sessionId: string | null = null
   let pendingPromptId: number | null = null
@@ -97,7 +97,6 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   let canListSessions = false
   let isSpawning = false
   const pendingConfigRequestIds = new Set<number>()
-  const permissionRequestIds = new Map<string, number>()
   let sessionCwd = '.'
 
   /** Resets protocol-level state shared between clear() and onSpawned. */
@@ -113,9 +112,9 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     canLoadSession = false
     canListSessions = false
     pendingConfigRequestIds.clear()
-    permissionRequestIds.clear()
     configOptions.value = []
-    acpConverter.reset()
+    toolCallsMap.clear()
+    permissionAsksMap.clear()
     currentStreamingMessage.value = null
   }
 
@@ -126,12 +125,12 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     return id
   }
 
-  const sendJsonRpcResponse = (id: number, result: unknown): void => {
+  const _sendJsonRpcResponse = (id: number, result: unknown): void => {
     const message = JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n'
     sendStdinRef(message)
   }
 
-  const sendJsonRpcNotification = (method: string, params: unknown): void => {
+  const _sendJsonRpcNotification = (method: string, params: unknown): void => {
     const message = JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n'
     sendStdinRef(message)
   }
@@ -148,9 +147,12 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     if (response.error) {
       if (response.id === loadSessionRequestId) {
         loadSessionRequestId = null
+        const failedSessionId = sessionId
         sessionId = null
-        newSessionRequestId = sendJsonRpc('session/new', { cwd: sessionCwd, mcpServers: [] })
-        status.value = 'connecting'
+        status.value = 'error'
+        if (failedSessionId) {
+          chatOptions.onSessionLoadError?.(failedSessionId, response.error.message ?? 'Failed to load session')
+        }
         return
       }
       if (pendingConfigRequestIds.has(response.id)) {
@@ -177,8 +179,12 @@ export function useChat(chatOptions: UseChatOptions = {}) {
             mcpServers: [],
           })
         } else {
+          const failedSessionId = pendingSessionToLoad
           pendingSessionToLoad = null
-          newSessionRequestId = sendJsonRpc('session/new', { cwd: sessionCwd, mcpServers: [] })
+          status.value = 'error'
+          if (failedSessionId) {
+            chatOptions.onSessionLoadError?.(failedSessionId, 'Failed to list sessions and cannot load session')
+          }
         }
         return
       }
@@ -207,6 +213,12 @@ export function useChat(chatOptions: UseChatOptions = {}) {
           })
           pendingSessionToLoad = null
         }
+      } else if (pendingSessionToLoad) {
+        // Agent doesn't support loading sessions — error
+        const failedSessionId = pendingSessionToLoad
+        pendingSessionToLoad = null
+        status.value = 'error'
+        chatOptions.onSessionLoadError?.(failedSessionId, 'Agent does not support loading sessions')
       } else {
         pendingSessionToLoad = null
         newSessionRequestId = sendJsonRpc('session/new', { cwd: sessionCwd, mcpServers: [] })
@@ -221,12 +233,16 @@ export function useChat(chatOptions: UseChatOptions = {}) {
       status.value = 'ready'
     } else if (response.id === loadSessionRequestId) {
       loadSessionRequestId = null
-      // Flush the last replayed message before finalizing — in case the final
-      // session_update and the session/load response arrived in the same chunk,
-      // updateFromConverter() hasn't been called yet for that message.
-      updateFromConverter()
-      acpConverter.finalize()
+      // Server has already sent all replayed messages as acp:message_chunk.
+      // Clear streaming state — session replay is complete.
       currentStreamingMessage.value = null
+      const loadResult = response.result as NewSessionResult
+      if (loadResult) {
+        const opts = buildConfigOptions(loadResult)
+        if (opts.length > 0) {
+          configOptions.value = opts
+        }
+      }
       if (sessionId) {
         chatOptions.onSessionReady?.(sessionId)
         requestSessionList()
@@ -256,15 +272,15 @@ export function useChat(chatOptions: UseChatOptions = {}) {
             mcpServers: [],
           })
         } else {
-          // Session not found in list — start a new session
-          newSessionRequestId = sendJsonRpc('session/new', { cwd: sessionCwd, mcpServers: [] })
+          // Session not found in agent's list — report error
+          status.value = 'error'
+          chatOptions.onSessionLoadError?.(targetSessionId, 'Session not found in agent')
         }
       } else {
         newSessionRequestId = sendJsonRpc('session/new', { cwd: sessionCwd, mcpServers: [] })
       }
     } else if (response.id === pendingPromptId) {
       const finalizedMessage = currentStreamingMessage.value
-      acpConverter.finalize()
       if (finalizedMessage) {
         chatOptions.onAssistantMessage?.(finalizedMessage)
       }
@@ -284,55 +300,10 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     }
   }
 
-  acpConverter.setCallbacks({
-    onResponse: handleAcpResponse,
-    onConfigOptionsUpdate: (newConfigOptions) => {
-      configOptions.value = newConfigOptions
-    },
-    onPermissionRequest: (requestId, params: AcpPermissionRequestParams) => {
-      permissionRequestIds.set(String(requestId), requestId)
-      updateFromConverter()
-
-      // Auto-allow: immediately respond without showing UI
-      if (settings.value.permissionMode === 'always-allow') {
-        const allowOption = params.options.find(o => o.kind === 'allow_once' || o.kind === 'allow_always')
-        const optionId = allowOption?.optionId ?? params.options[0]?.optionId
-        if (optionId) {
-          respondToPermission(String(requestId), optionId)
-        }
-      }
-    },
-  })
-
   let sendStdinRef: (data: string) => void = () => {}
+  let sendPermissionResponseRef: (permissionId: string, optionId: string) => void = () => {}
 
-  const updateFromConverter = () => {
-    const msg = acpConverter.getCurrentMessage()
-    if (msg) {
-      if (currentStreamingMessage.value?.id === msg.id) {
-        currentStreamingMessage.value.content = msg.content
-        // Reassign parts to trigger Vue reactivity for inline tool call / permission updates
-        currentStreamingMessage.value.parts = msg.parts ? [...msg.parts] : msg.parts
-      } else {
-        currentStreamingMessage.value = msg
-        messages.value.push(msg)
-      }
-      if (pendingPromptId !== null) {
-        status.value = 'streaming'
-      }
-    }
-
-    // Keep internal refs in sync for reactivity triggers and permission response lookup.
-    // Tool calls and permission asks are now also embedded in message parts for inline rendering.
-    toolCalls.value = acpConverter.getToolCalls()
-    const newPermissionAsks = acpConverter.getPermissionAsks()
-    if (import.meta.dev) {
-      console.log('[useChat] updateFromConverter - permissionAsks count:', newPermissionAsks.length, 'msg exists:', !!msg)
-    }
-    permissionAsks.value = newPermissionAsks
-  }
-
-  const { status: wsStatus, sendStdin, spawn, kill } = useAgentProcess({
+  const { status: wsStatus, sendStdin, sendPermissionResponse: wsPermissionResponse, spawn, kill } = useAgentProcess({
     autoSpawn: false,
     onSpawned: () => {
       isSpawning = false
@@ -342,13 +313,66 @@ export function useChat(chatOptions: UseChatOptions = {}) {
       status.value = 'connecting'
       initializeRequestId = sendJsonRpc('initialize', { protocolVersion: 1, clientCapabilities: {} })
     },
-    onStdout: (data: string) => {
-      acpConverter.process(data)
-      updateFromConverter()
+    onMessageChunk: (msg: ChatMessage) => {
+      if (currentStreamingMessage.value?.id === msg.id) {
+        currentStreamingMessage.value.content = msg.content
+        // Reassign parts to trigger Vue reactivity for inline tool call / permission updates
+        currentStreamingMessage.value.parts = msg.parts ? [...msg.parts] : msg.parts
+      } else {
+        // Dedup: if a message with this id already exists (e.g. replay chunks arriving
+        // after session/load response cleared currentStreamingMessage), update in place.
+        const existing = messages.value.find(m => m.id === msg.id)
+        if (existing) {
+          existing.content = msg.content
+          existing.parts = msg.parts ? [...msg.parts] : msg.parts
+          // Re-point to the array entry so future chunks mutate the same reference
+          currentStreamingMessage.value = existing
+        } else {
+          messages.value.push(msg)
+          currentStreamingMessage.value = msg
+        }
+      }
+      if (pendingPromptId !== null) {
+        status.value = 'streaming'
+      }
     },
-    onStderr: (data: string) => {
-      acpConverter.process(data)
-      updateFromConverter()
+    onToolCall: (tc: ToolCallPart) => {
+      toolCallsMap.set(tc.toolCallId, tc)
+      toolCalls.value = Array.from(toolCallsMap.values())
+    },
+    onPermissionRequest: (pa: PermissionAskPart) => {
+      permissionAsksMap.set(pa.permissionId, pa)
+      permissionAsks.value = Array.from(permissionAsksMap.values())
+
+      // Auto-allow: immediately respond without showing UI
+      if (settings.value.permissionMode === 'always-allow') {
+        const allowOption = pa.permissionOptions?.find(o => o.value.includes('allow'))
+        const optionId = allowOption?.value ?? pa.permissionOptions?.[0]?.value
+        if (optionId) {
+          respondToPermission(pa.permissionId, optionId)
+        }
+      }
+    },
+    onResponse: (response) => {
+      // Reconstruct a JsonRpcResponse to route through handleAcpResponse
+      const jsonRpcResponse: JsonRpcResponse = {
+        jsonrpc: '2.0',
+        id: response.id as number,
+        result: response.result,
+        error: response.error,
+      }
+      handleAcpResponse(jsonRpcResponse)
+    },
+    onConfigUpdate: (options: ConfigOption[]) => {
+      configOptions.value = options
+    },
+    onFinalized: (msg: ChatMessage | null) => {
+      // Stream ended — finalize any pending message
+      if (msg && currentStreamingMessage.value?.id === msg.id) {
+        // Update with final state
+        currentStreamingMessage.value.content = msg.content
+        currentStreamingMessage.value.parts = msg.parts ? [...msg.parts] : msg.parts
+      }
     },
     onExit: () => {
       // Ignore stale exit events from the old process being killed during a respawn.
@@ -357,7 +381,6 @@ export function useChat(chatOptions: UseChatOptions = {}) {
       // clobber the freshly-initialized session state.
       if (isSpawning) return
 
-      acpConverter.finalize()
       currentStreamingMessage.value = null
       sessionId = null
       status.value = 'ready'
@@ -370,6 +393,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   })
 
   sendStdinRef = sendStdin
+  sendPermissionResponseRef = wsPermissionResponse
 
   watch(wsStatus, (newStatus) => {
     if (newStatus === 'connecting') {
@@ -429,19 +453,16 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   }
 
   const respondToPermission = (permissionId: string, response: string) => {
-    acpConverter.respondToPermission(permissionId, response)
-
-    const requestId = permissionRequestIds.get(permissionId)
-    if (requestId !== undefined) {
-      permissionRequestIds.delete(permissionId)
-      sendJsonRpcResponse(requestId, {
-        outcome: { outcome: 'selected', optionId: response },
-      })
-    } else {
-      sendJsonRpcNotification('permission/response', { permissionId, response })
+    // Update local state — mark permission as responded
+    const ask = permissionAsksMap.get(permissionId)
+    if (ask) {
+      ask.permissionResponse = response
+      permissionAsksMap.delete(permissionId)
+      permissionAsks.value = Array.from(permissionAsksMap.values())
     }
 
-    permissionAsks.value = acpConverter.getPermissionAsks()
+    // Send via structured WS message for server-side handling
+    sendPermissionResponseRef(permissionId, response)
   }
 
   const setConfigOption = (configId: string, value: string) => {

@@ -13,10 +13,10 @@
 
     <!-- Threads Section -->
     <div class="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1">
-      <div v-for="(conversations, label) in groupedConversations" :key="label" class="flex flex-col gap-1">
+      <div v-for="(items, label) in groupedConversations" :key="label" class="flex flex-col gap-1">
         <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-1">{{ label }}</div>
         <ConversationItem
-          v-for="conversation in conversations"
+          v-for="conversation in items"
           :key="conversation.id"
           :conversation="conversation"
           :is-active="conversation.id === activeConversationId"
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Conversation } from '~/types/chat'
+import type { Conversation } from '#shared/types/chat'
 
 interface Props {
   conversations: readonly Conversation[]

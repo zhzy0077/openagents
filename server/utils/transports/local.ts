@@ -96,6 +96,8 @@ export const localTransportFactory: TransportFactory = {
     })
     child.stderr?.on('error', () => {})
 
+    child.stdin?.on('error', () => {})
+
     child.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
       transports.delete(peerId)
       callbacks.onClose(code, signal)

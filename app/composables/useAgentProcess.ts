@@ -1,11 +1,17 @@
-import type { TerminalMessage } from '~/types/chat'
+import type { ServerMessage, ClientMessage, AcpResponseMessage } from '#shared/types/ws-messages'
+import type { ChatMessage, ToolCallPart, PermissionAskPart } from '#shared/types/chat'
+import type { ConfigOption } from '#shared/types/acp'
 import { AGENT_PRESETS } from '~/composables/useSettings'
 
 export interface UseAgentProcessOptions {
   autoSpawn?: boolean
   onSpawned?: (pid: number) => void
-  onStdout?: (data: string) => void
-  onStderr?: (data: string) => void
+  onMessageChunk?: (message: ChatMessage) => void
+  onToolCall?: (toolCall: ToolCallPart) => void
+  onPermissionRequest?: (permissionAsk: PermissionAskPart) => void
+  onResponse?: (response: AcpResponseMessage) => void
+  onConfigUpdate?: (options: ConfigOption[]) => void
+  onFinalized?: (message: ChatMessage | null) => void
   onExit?: (code: number | null, signal?: string) => void
   onError?: (error: Error) => void
 }
@@ -18,7 +24,7 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
   const pid = ref<number | null>(null)
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let intentionalDisconnect = false
-  let pendingMessages: TerminalMessage[] = []
+  let pendingMessages: ClientMessage[] = []
 
   const isSocketActive = (socket: WebSocket | null): boolean => {
     return socket !== null && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
@@ -68,7 +74,7 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
     socket.onmessage = (event) => {
       if (ws.value !== socket) return
       try {
-        const message: TerminalMessage = JSON.parse(event.data)
+        const message: ServerMessage = JSON.parse(event.data)
 
         switch (message.type) {
           case 'spawned':
@@ -77,20 +83,33 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
               options.onSpawned(message.pid)
             }
             break
-          case 'stdout':
-            if (message.data && options.onStdout) {
-              options.onStdout(message.data)
-            }
+          case 'acp:message_chunk':
+            options.onMessageChunk?.(message.message)
             break
-          case 'stderr':
-            if (message.data && options.onStderr) {
-              options.onStderr(message.data)
-            }
+          case 'acp:tool_call':
+            options.onToolCall?.(message.toolCall)
+            break
+          case 'acp:permission_request':
+            options.onPermissionRequest?.(message.permissionAsk)
+            break
+          case 'acp:response':
+            options.onResponse?.(message)
+            break
+          case 'acp:config_update':
+            options.onConfigUpdate?.(message.options)
+            break
+          case 'acp:finalized':
+            options.onFinalized?.(message.message)
             break
           case 'exit':
             pid.value = null
             if (options.onExit) {
-              options.onExit(message.code ?? null, message.signal)
+              options.onExit(message.code ?? null, message.signal ?? undefined)
+            }
+            break
+          case 'error':
+            if (options.onError) {
+              options.onError(new Error(message.message))
             }
             break
         }
@@ -129,7 +148,7 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
     }
   }
 
-  const send = (message: TerminalMessage) => {
+  const send = (message: ClientMessage) => {
     if (ws.value?.readyState === WebSocket.OPEN) {
       ws.value.send(JSON.stringify(message))
     } else if (!intentionalDisconnect) {
@@ -157,6 +176,10 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
 
   const kill = () => {
     send({ type: 'kill' })
+  }
+
+  const sendPermissionResponse = (permissionId: string, optionId: string) => {
+    send({ type: 'permission_response', permissionId, optionId })
   }
 
   const disconnect = () => {
@@ -188,6 +211,7 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
     connect,
     disconnect,
     sendStdin,
+    sendPermissionResponse,
     spawn,
     kill
   }

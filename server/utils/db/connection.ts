@@ -9,28 +9,9 @@ function initializeSchema(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
-      presetId TEXT NOT NULL DEFAULT 'claude-code',
-      cwd TEXT NOT NULL DEFAULT '.',
-      sessionId TEXT,
-      createdAt TEXT NOT NULL,
+      preset TEXT NOT NULL DEFAULT 'claude-code',
       updatedAt TEXT NOT NULL
     )
-  `)
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id TEXT PRIMARY KEY,
-      conversationId TEXT NOT NULL,
-      role TEXT NOT NULL,
-      content TEXT NOT NULL DEFAULT '',
-      parts TEXT,
-      createdAt TEXT NOT NULL,
-      FOREIGN KEY (conversationId) REFERENCES conversations(id) ON DELETE CASCADE
-    )
-  `)
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_messages_conversationId ON messages(conversationId)
   `)
 }
 
