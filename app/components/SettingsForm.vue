@@ -1,5 +1,13 @@
 <template>
   <div class="flex flex-col gap-5">
+    <UFormField label="Default Agent">
+      <USelect
+        v-model="draft.preset"
+        :items="presetOptions"
+        class="w-full"
+      />
+    </UFormField>
+
     <UFormField label="Username">
       <UInput
         v-model="draft.username"
@@ -27,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PermissionMode } from '~/composables/useSettings'
+import { AGENT_PRESETS, type PermissionMode } from '~/composables/useSettings'
 
 const draft = defineModel<{
   username: string
@@ -35,6 +43,11 @@ const draft = defineModel<{
   permissionMode: PermissionMode
   defaultCwd: string
 }>('draft', { required: true })
+
+const presetOptions = AGENT_PRESETS.map(p => ({
+  label: p.name,
+  value: p.id,
+}))
 
 const permissionModeOptions = [
   { label: 'Always ask', value: 'always-ask' },

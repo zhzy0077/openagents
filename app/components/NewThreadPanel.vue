@@ -33,10 +33,10 @@
                 <div class="flex items-center gap-2.5">
                   <div
                     class="w-8 h-8 rounded-lg flex items-center justify-center"
-                    :class="preset.id === 'claude-code' ? 'bg-[#D97706]' : 'bg-[#3B82F6]'"
+                    :class="preset.iconBg"
                   >
                     <UIcon
-                      :name="preset.id === 'claude-code' ? 'i-lucide-bot' : 'i-lucide-code'"
+                      :name="preset.icon"
                       class="w-4 h-4 text-white"
                     />
                   </div>
@@ -92,14 +92,13 @@ const emit = defineEmits<{
 const presets = AGENT_PRESETS
 const { settings } = useSettings()
 
-const selectedPreset = ref(settings.value.preset)
+const selectedPreset = ref('')
 const cwd = ref('')
 
 // Sync from settings after client-side hydration (localStorage unavailable on server)
 onMounted(() => {
-  if (settings.value.defaultCwd && !cwd.value) {
-    cwd.value = settings.value.defaultCwd
-  }
+  selectedPreset.value = settings.value.preset
+  cwd.value = settings.value.defaultCwd || ''
 })
 
 const handleStart = () => {
