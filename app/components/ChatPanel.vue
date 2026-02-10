@@ -105,15 +105,20 @@
                      {{ part.content }}
                    </div>
                    
-                   <div v-if="!part.permissionResponse" class="flex flex-col gap-2 w-full">
+                   <div v-if="!part.permissionResponse">
                      <PermissionButtons
                        :options="part.permissionOptions"
                        @respond="(value) => $emit('respond-permission', part.permissionId!, value)"
                      />
                    </div>
-                   <div v-else class="text-sm text-gray-500 dark:text-gray-400">
-                     {{ part.permissionResponse?.includes('reject') || part.permissionResponse?.includes('deny') ? 'Denied' : 'Allowed' }}
-                   </div>
+                   <PermissionResult
+                     v-else
+                     :granted="!isPermissionDenied(part.permissionResponse)"
+                     :command="part.content"
+                     :result-text="isPermissionDenied(part.permissionResponse)
+                       ? 'You rejected this command. The agent will continue with an alternative approach.'
+                       : undefined"
+                   />
                 </div>
 
               </template>
@@ -277,6 +282,11 @@ const openThoughtDetail = (part: ChatMessagePart) => {
     content: part.content,
     isStreaming: props.status === 'streaming',
   }
+}
+
+function isPermissionDenied(response: string | undefined): boolean {
+  if (!response) return false
+  return response.includes('reject') || response.includes('deny') || response === 'no'
 }
 
 const modeOption = computed(() => props.configOptions?.find(o => o.category === 'mode'))
