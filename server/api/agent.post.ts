@@ -11,7 +11,7 @@ const transportFactory: TransportFactory =
 
 export default defineEventHandler(async (event) => {
   // Step 1: Auth check
-  const apiKey = useRuntimeConfig().openagentsApiKey
+  const apiKey = String(useRuntimeConfig().openagentsApiKey ?? '')
   if (!apiKey) {
     throw createError({ statusCode: 503, message: 'API key not configured' })
   }
