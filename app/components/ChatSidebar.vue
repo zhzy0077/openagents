@@ -28,6 +28,14 @@
 
     <!-- Footer -->
     <div class="p-3 flex flex-col gap-1 border-t border-[#E5E7EB] dark:border-gray-800">
+      <!-- File System -->
+      <NuxtLink
+        to="/files"
+        class="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[#E5E7EB] dark:hover:bg-gray-800 rounded-md transition-colors h-9"
+      >
+        <UIcon name="i-lucide-folder" class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+        <span class="text-[13px] font-normal text-[#111827] dark:text-gray-50">File System</span>
+      </NuxtLink>
       <!-- User Profile -->
       <div class="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[#E5E7EB] dark:hover:bg-gray-800 rounded-md transition-colors h-auto" @click="$emit('open-settings')">
         <div class="w-8 h-8 rounded-full bg-[#E0E7FF] dark:bg-indigo-900 flex items-center justify-center text-[#4F46E5] dark:text-indigo-200 text-xs font-semibold">
