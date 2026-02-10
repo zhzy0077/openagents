@@ -17,7 +17,6 @@ export interface UseAgentProcessOptions {
 }
 
 export function useAgentProcess(options: UseAgentProcessOptions = {}) {
-  const config = useRuntimeConfig()
   const { activePreset } = useSettings()
   const ws = ref<WebSocket | null>(null)
   const status = ref<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
@@ -54,7 +53,7 @@ export function useAgentProcess(options: UseAgentProcessOptions = {}) {
     clearReconnectTimer()
     intentionalDisconnect = false
     status.value = 'connecting'
-    const wsUrl = config.public.wsEndpoint as string
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/terminal`
     const socket = new WebSocket(wsUrl)
     ws.value = socket
 

@@ -20,8 +20,5 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     openagentsApiKey: '',
-    public: {
-      wsEndpoint: 'ws://localhost:3000/ws/terminal'
-    }
   }
 })

@@ -53,6 +53,12 @@ RUN curl -fsSL https://claude.ai/install.sh | bash \
 RUN curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path \
     && ln -sf /root/.opencode/bin/opencode /usr/local/bin/opencode
 
+# Gemini CLI (npm global install)
+RUN npm install -g @google/gemini-cli
+
+# GitHub Copilot CLI (npm global install)
+RUN npm install -g @github/copilot
+
 WORKDIR /app
 
 # Copy built app from build stage
