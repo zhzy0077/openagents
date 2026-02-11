@@ -4,10 +4,16 @@ import { lookup } from './mime'
 
 /**
  * Root directory for the file manager.
- * Defaults to the current working directory. Can be overridden via FILES_ROOT env var.
+ * Defaults to the filesystem root so users can navigate anywhere.
+ * On Windows this is the drive root (e.g. "C:\\"), on POSIX it is "/".
  */
 export function getFilesRoot(): string {
-  return process.env.FILES_ROOT || process.cwd()
+  if (process.env.FILES_ROOT) return process.env.FILES_ROOT
+  // Use filesystem root: "/" on POSIX, drive root on Windows
+  if (process.platform === 'win32') {
+    return resolve('/')
+  }
+  return '/'
 }
 
 /** Available storage identifiers */
