@@ -141,8 +141,7 @@ export async function listDirectory(vuefinderPath: string): Promise<FsData> {
 
   const files: DirEntry[] = []
   for (const name of entries) {
-    // Skip hidden files starting with . (optional, but sensible default)
-    if (name.startsWith('.')) continue
+
     try {
       const entry = await buildDirEntry(join(absDir, name), dirname, storage)
       files.push(entry)
