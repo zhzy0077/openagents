@@ -45,17 +45,11 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Claude Code CLI — install then relocate to /opt so /root/ stays clean
-# for volume mounts (user auth/session data lives in ~/.claude at runtime)
-RUN curl -fsSL https://claude.ai/install.sh | bash \
-    && mv /root/.claude /opt/claude \
-    && ln -sf /opt/claude/bin/claude /usr/local/bin/claude
+# Claude Code CLI (npm global install)
+RUN npm install -g @anthropic-ai/claude-code
 
-# OpenCode CLI — install then relocate to /opt so /root/ stays clean
-# for volume mounts (user config lives in ~/.opencode at runtime)
-RUN curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path \
-    && mv /root/.opencode /opt/opencode \
-    && ln -sf /opt/opencode/bin/opencode /usr/local/bin/opencode
+# OpenCode CLI (npm global install)
+RUN npm install -g opencode-ai@latest
 
 # Gemini CLI (npm global install)
 RUN npm install -g @google/gemini-cli
