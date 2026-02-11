@@ -21,6 +21,30 @@ const converters = new Map<string, AcpConverter>()
 /** Per-peer high-water mark: number of finalized messages already sent to the client */
 const sentCounts = new Map<string, number>()
 
+/**
+ * Peers whose WebSocket disconnected while the agent had work in-flight.
+ * Instead of killing immediately, we let the agent finish the current turn
+ * and then clean up. A safety timeout prevents orphaned processes.
+ */
+const detachedPeers = new Map<string, ReturnType<typeof setTimeout>>()
+
+/** Max time (ms) to wait for a detached agent to finish before force-killing. */
+const DETACHED_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+
+function cleanupDetached(peerId: string): void {
+  const timer = detachedPeers.get(peerId)
+  if (timer) {
+    clearTimeout(timer)
+    detachedPeers.delete(peerId)
+  }
+  cleanupConverter(peerId)
+  transportFactory.cleanup(peerId)
+}
+
+function isDetached(peerId: string): boolean {
+  return detachedPeers.has(peerId)
+}
+
 function sendMessage(peer: Peer, message: ServerMessage): void {
   try {
     peer.send(JSON.stringify(message))
@@ -81,6 +105,15 @@ function handleSpawn(peer: Peer, msg: SpawnClientMessage): void {
       // This ensures the next prompt turn starts a fresh assistant message
       // instead of appending to the previous one.
       converter.finalizeCurrentMessage()
+
+      if (isDetached(peer.id)) {
+        // Peer disconnected while this turn was in-flight.
+        // The agent finished its work — clean up now.
+        console.log(`[ws] Detached peer ${peer.id} received response, cleaning up`)
+        cleanupDetached(peer.id)
+        return
+      }
+
       // Flush any remaining unsent finalized messages to the client
       sendConverterState(peer, converter)
       // Update high-water mark to cover all finalized messages so the next
@@ -98,7 +131,24 @@ function handleSpawn(peer: Peer, msg: SpawnClientMessage): void {
     onConfigOptionsUpdate: (options) => {
       sendMessage(peer, { type: 'acp:config_update', options })
     },
-    onPermissionRequest: (_requestId, _params) => {
+    onPermissionRequest: (requestId, params) => {
+      if (isDetached(peer.id)) {
+        // Peer disconnected — auto-approve so the agent can continue.
+        // Same strategy as /api/agent: prefer 'allow' option, fall back to first.
+        const optionId =
+          params.options.find(o => o.optionId.includes('allow'))?.optionId
+          ?? params.options[0]?.optionId
+        if (optionId) {
+          const transport = transportFactory.get(peer.id)
+          if (transport) {
+            transport.write(
+              JSON.stringify({ jsonrpc: '2.0', id: requestId, result: { outcome: { outcome: 'selected', optionId } } }) + '\n',
+            )
+          }
+          converter.respondToPermission(String(requestId), optionId)
+        }
+        return
+      }
       // Permission requests are also surfaced via session/update -> permission_ask,
       // which gets picked up in sendConverterState. The callback fires for the
       // JSON-RPC request path (session/request_permission) — the converter already
@@ -124,6 +174,12 @@ function handleSpawn(peer: Peer, msg: SpawnClientMessage): void {
       },
       onError: (error: string) => sendError(peer, error),
       onClose: (code: number | null, signal: string | null) => {
+        if (isDetached(peer.id)) {
+          // Process exited while detached (e.g. agent crashed or finished without response).
+          console.log(`[ws] Detached peer ${peer.id} process exited (code=${code}, signal=${signal})`)
+          cleanupDetached(peer.id)
+          return
+        }
         // Flush any remaining unsent messages before finalizing
         sendConverterState(peer, converter)
         // Finalize and send the last message snapshot
@@ -240,13 +296,35 @@ export default defineWebSocketHandler({
 
   close(peer) {
     console.log(`[ws] Client disconnected: ${peer.id}`)
-    cleanupConverter(peer.id)
-    transportFactory.cleanup(peer.id)
+    const transport = transportFactory.get(peer.id)
+    if (transport) {
+      // Agent process is still running — detach instead of killing.
+      // The process will be cleaned up when it finishes (onResponse/onClose)
+      // or when the safety timeout fires.
+      console.log(`[ws] Detaching peer ${peer.id} — agent still running, waiting for turn to finish`)
+      const timer = setTimeout(() => {
+        console.log(`[ws] Detached peer ${peer.id} timed out, force-cleaning up`)
+        cleanupDetached(peer.id)
+      }, DETACHED_TIMEOUT_MS)
+      detachedPeers.set(peer.id, timer)
+    } else {
+      // No active process — clean up immediately
+      cleanupConverter(peer.id)
+    }
   },
 
   error(peer, error) {
     console.error(`[ws] Error for ${peer.id}:`, error)
-    cleanupConverter(peer.id)
-    transportFactory.cleanup(peer.id)
+    const transport = transportFactory.get(peer.id)
+    if (transport) {
+      console.log(`[ws] Detaching peer ${peer.id} after error — agent still running, waiting for turn to finish`)
+      const timer = setTimeout(() => {
+        console.log(`[ws] Detached peer ${peer.id} timed out after error, force-cleaning up`)
+        cleanupDetached(peer.id)
+      }, DETACHED_TIMEOUT_MS)
+      detachedPeers.set(peer.id, timer)
+    } else {
+      cleanupConverter(peer.id)
+    }
   }
 })
