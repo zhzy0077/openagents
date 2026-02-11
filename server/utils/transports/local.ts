@@ -1,20 +1,25 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 import type { ProcessTransport, TransportFactory, TransportOptions, TransportCallbacks } from './types'
 import { createTransportManager } from './base-factory'
 
 const CLAUDE_CODE_ACP_COMMAND = 'claude-code-acp'
+const CLAUDE_CODE_ACP_PKG = '@zed-industries/claude-code-acp/dist/index.js'
 
 // Lazily resolved on first use — avoids crashing the server at startup
 // when the package isn't installed (e.g. non-Docker deploys using other agents).
+//
+// We use createRequire(import.meta.url) so the resolution starts from the
+// bundled chunk location.  Nitro rewrites import.meta.url to the real file URL
+// of the bundle, so Node walks up from .output/server/chunks/ and finds
+// node_modules/ at the deploy root (Dockerfile copies it there).
 let claudeCodeAcpEntry: string | undefined
 
 function getClaudeCodeAcpEntry(): string {
   if (!claudeCodeAcpEntry) {
     try {
-      claudeCodeAcpEntry = fileURLToPath(
-        import.meta.resolve('@zed-industries/claude-code-acp/dist/index.js')
-      )
+      const require = createRequire(import.meta.url)
+      claudeCodeAcpEntry = require.resolve(CLAUDE_CODE_ACP_PKG)
     } catch {
       throw new Error(
         'Unable to resolve "@zed-industries/claude-code-acp". '
