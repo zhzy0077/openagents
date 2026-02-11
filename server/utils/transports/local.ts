@@ -1,11 +1,29 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import type { ProcessTransport, TransportFactory, TransportOptions, TransportCallbacks } from './types'
 import { createTransportManager } from './base-factory'
 
-const require = createRequire(import.meta.url)
 const CLAUDE_CODE_ACP_COMMAND = 'claude-code-acp'
-const CLAUDE_CODE_ACP_ENTRY = '@zed-industries/claude-code-acp/dist/index.js'
+
+// Lazily resolved on first use — avoids crashing the server at startup
+// when the package isn't installed (e.g. non-Docker deploys using other agents).
+let claudeCodeAcpEntry: string | undefined
+
+function getClaudeCodeAcpEntry(): string {
+  if (!claudeCodeAcpEntry) {
+    try {
+      claudeCodeAcpEntry = fileURLToPath(
+        import.meta.resolve('@zed-industries/claude-code-acp/dist/index.js')
+      )
+    } catch {
+      throw new Error(
+        'Unable to resolve "@zed-industries/claude-code-acp". '
+        + 'Make sure node_modules is available at the deployment root (see Dockerfile).'
+      )
+    }
+  }
+  return claudeCodeAcpEntry
+}
 
 interface ResolvedCommand {
   command: string
@@ -17,18 +35,9 @@ function resolveCommand(command: string, args: string[]): ResolvedCommand {
     return { command, args }
   }
 
-  let entryPath: string
-  try {
-    entryPath = require.resolve(CLAUDE_CODE_ACP_ENTRY)
-  } catch {
-    throw new Error(
-      'Unable to resolve local dependency "@zed-industries/claude-code-acp". Run "pnpm install" in this project.'
-    )
-  }
-
   return {
     command: process.execPath,
-    args: [entryPath, ...args]
+    args: [getClaudeCodeAcpEntry(), ...args]
   }
 }
 
