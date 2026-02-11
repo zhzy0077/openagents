@@ -2,6 +2,7 @@
   <ChatPanel
     :messages="messages"
     :status="status"
+    :error-message="errorMessage"
     :input="input"
     :config-options="configOptions"
     :active-conversation-title="activeConversationTitle"
@@ -46,6 +47,7 @@ const {
 const {
   messages,
   status,
+  errorMessage,
   input,
   configOptions,
   sendMessage,

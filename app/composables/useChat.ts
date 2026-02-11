@@ -77,6 +77,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   const { settings } = useSettings()
   const messages = ref<ChatMessage[]>([])
   const status = ref<ChatStatus>('ready')
+  const errorMessage = ref<string | null>(null)
   const input = ref('')
   const currentStreamingMessage = ref<ChatMessage | null>(null)
   const toolCalls = ref<ToolCallPart[]>([])
@@ -113,6 +114,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     canListSessions = false
     pendingConfigRequestIds.clear()
     configOptions.value = []
+    errorMessage.value = null
     toolCallsMap.clear()
     permissionAsksMap.clear()
     currentStreamingMessage.value = null
@@ -149,6 +151,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
         loadSessionRequestId = null
         const failedSessionId = sessionId
         sessionId = null
+        errorMessage.value = response.error.message || 'Failed to load session'
         status.value = 'error'
         if (failedSessionId) {
           chatOptions.onSessionLoadError?.(failedSessionId, response.error.message ?? 'Failed to load session')
@@ -181,6 +184,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
         } else {
           const failedSessionId = pendingSessionToLoad
           pendingSessionToLoad = null
+          errorMessage.value = response.error.message || 'Failed to list sessions and cannot load session'
           status.value = 'error'
           if (failedSessionId) {
             chatOptions.onSessionLoadError?.(failedSessionId, 'Failed to list sessions and cannot load session')
@@ -189,6 +193,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
         return
       }
       console.error('ACP error:', response.error)
+      errorMessage.value = response.error.message || 'An unknown error occurred'
       status.value = 'error'
       return
     }
@@ -217,6 +222,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
         // Agent doesn't support loading sessions — error
         const failedSessionId = pendingSessionToLoad
         pendingSessionToLoad = null
+        errorMessage.value = 'Agent does not support loading sessions'
         status.value = 'error'
         chatOptions.onSessionLoadError?.(failedSessionId, 'Agent does not support loading sessions')
       } else {
@@ -273,6 +279,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
           })
         } else {
           // Session not found in agent's list — report error
+          errorMessage.value = 'Session not found in agent'
           status.value = 'error'
           chatOptions.onSessionLoadError?.(targetSessionId, 'Session not found in agent')
         }
@@ -387,6 +394,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     },
     onError: (error: Error) => {
       console.error('WebSocket error:', error)
+      errorMessage.value = error.message || 'Connection error'
       status.value = 'error'
       currentStreamingMessage.value = null
     }
@@ -441,6 +449,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
     pendingSessionToLoad = null
     isSpawning = false
     sessionCwd = '.'
+    errorMessage.value = null
     status.value = 'ready'
   }
 
@@ -492,6 +501,7 @@ export function useChat(chatOptions: UseChatOptions = {}) {
   return {
     messages: readonly(messages),
     status: readonly(status),
+    errorMessage: readonly(errorMessage),
     input,
     configOptions: readonly(configOptions),
     sendMessage,

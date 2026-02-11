@@ -34,8 +34,19 @@
 
       <!-- Messages Area -->
       <div ref="messagesContainer" class="flex-1 overflow-y-auto py-6 flex flex-col gap-6">
+        <!-- Error State -->
+        <div v-if="status === 'error' && errorMessage" class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center">
+            <UIcon name="i-lucide-circle-alert" class="w-6 h-6 text-red-500" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-50">Something went wrong</h2>
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</p>
+          </div>
+        </div>
+
         <!-- Empty State -->
-        <div v-if="messages.length === 0 && status === 'ready'" class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+        <div v-else-if="messages.length === 0 && status === 'ready'" class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
           <div class="w-12 h-12 rounded-full bg-[#10A37F]/10 dark:bg-[#10A37F]/20 flex items-center justify-center">
             <UIcon name="i-lucide-message-circle" class="w-6 h-6 text-[#10A37F] dark:text-[#10A37F]" />
           </div>
@@ -214,6 +225,7 @@ type DetailView =
 interface Props {
   messages: readonly ChatMessage[]
   status: ChatStatus
+  errorMessage?: string | null
   input: string
   configOptions?: readonly ConfigOption[]
   activeConversationTitle?: string
