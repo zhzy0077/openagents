@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
 import { existsSync, mkdirSync } from 'node:fs'
 
 let db: Database.Database | null = null
@@ -20,8 +21,8 @@ export function getDatabase(): Database.Database {
     return db
   }
 
-  // Ensure .data directory exists
-  const dataDir = join(process.cwd(), '.data')
+  // Store data in ~/.openagents
+  const dataDir = join(homedir(), '.openagents')
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true })
   }
