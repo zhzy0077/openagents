@@ -33,7 +33,7 @@
                 <div class="flex items-center gap-2.5">
                   <div
                     class="w-8 h-8 rounded-lg flex items-center justify-center"
-                    :class="preset.iconBg"
+                    :style="{ backgroundColor: preset.iconBg }"
                   >
                     <UIcon
                       :name="preset.icon"

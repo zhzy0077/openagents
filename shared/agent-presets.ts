@@ -6,7 +6,7 @@ export interface AgentPreset {
   args: string[]
   /** Lucide icon name for the preset button */
   icon: string
-  /** Tailwind bg-color class for the icon badge */
+  /** Hex background color for the icon badge */
   iconBg: string
 }
 
@@ -18,7 +18,7 @@ export const AGENT_PRESETS: AgentPreset[] = [
     command: 'claude-code-acp',
     args: [],
     icon: 'i-lucide-bot',
-    iconBg: 'bg-[#D97706]',
+    iconBg: '#D97706',
   },
   {
     id: 'opencode',
@@ -27,7 +27,7 @@ export const AGENT_PRESETS: AgentPreset[] = [
     command: 'opencode',
     args: ['acp'],
     icon: 'i-lucide-code',
-    iconBg: 'bg-[#3B82F6]',
+    iconBg: '#3B82F6',
   },
   {
     id: 'gemini-cli',
@@ -36,7 +36,7 @@ export const AGENT_PRESETS: AgentPreset[] = [
     command: 'gemini',
     args: ['--experimental-acp'],
     icon: 'i-lucide-sparkles',
-    iconBg: 'bg-[#4285F4]',
+    iconBg: '#4285F4',
   },
   {
     id: 'copilot-cli',
@@ -45,6 +45,6 @@ export const AGENT_PRESETS: AgentPreset[] = [
     command: 'copilot',
     args: ['--acp'],
     icon: 'i-lucide-github',
-    iconBg: 'bg-[#6E40C9]',
+    iconBg: '#6E40C9',
   },
 ]
