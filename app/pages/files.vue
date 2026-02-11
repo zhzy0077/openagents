@@ -21,7 +21,7 @@
           :config="{
             initialPath: 'local://',
             persist: true,
-            theme: colorMode.value === 'dark' ? 'dark' : 'default',
+            theme: colorMode.value === 'dark' ? 'valorite' : 'silver',
           }"
         />
         <template #fallback>

@@ -40,7 +40,9 @@ export function parsePath(vuefinderPath: string): { storage: string; relative: s
 export function resolveAbsolutePath(vuefinderPath: string): string {
   const { relative } = parsePath(vuefinderPath)
   const root = getFilesRoot()
-  const abs = resolve(root, relative)
+  // Strip leading slashes so resolve() doesn't treat relative as an absolute path
+  const sanitized = relative.replace(/^[/\\]+/, '')
+  const abs = resolve(root, sanitized)
 
   // Guard against path traversal
   if (!abs.startsWith(root)) {
