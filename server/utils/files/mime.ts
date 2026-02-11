@@ -30,7 +30,8 @@ const MIME_MAP: Record<string, string> = {
   cts: 'text/typescript',
   jsx: 'text/jsx',
   tsx: 'text/tsx',
-  json: 'application/json',
+  json: 'text/json',
+  jsonc: 'text/json',
   vue: 'text/html',
   svelte: 'text/html',
   py: 'text/x-python',
@@ -102,7 +103,7 @@ const MIME_MAP: Record<string, string> = {
 
   // Other
   wasm: 'application/wasm',
-  map: 'application/json',
+  map: 'text/json',
 }
 
 /**
@@ -118,5 +119,5 @@ export function lookup(filename: string): string {
  * Check if a MIME type represents a text-based file (previewable as text).
  */
 export function isTextMime(mimeType: string): boolean {
-  return mimeType.startsWith('text/') || mimeType === 'application/json' || mimeType === 'application/xml'
+  return mimeType.startsWith('text/') || mimeType === 'application/xml'
 }
