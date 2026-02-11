@@ -53,6 +53,8 @@ export interface AcpToolCall {
   status: ToolCallStatus
   content?: AcpContentBlock | AcpContentBlock[]
   locations?: string[]
+  rawInput?: unknown
+  rawOutput?: unknown
 }
 
 // Config option types
@@ -137,6 +139,8 @@ export interface AcpToolCallCreate {
   status?: ToolCallStatus
   content?: AcpContentBlock | AcpContentBlock[]
   locations?: string[]
+  rawInput?: unknown
+  rawOutput?: unknown
 }
 
 export interface AcpToolCallUpdate {
@@ -149,6 +153,8 @@ export interface AcpToolCallUpdate {
   status?: ToolCallStatus
   content?: AcpContentBlock | AcpContentBlock[]
   locations?: string[]
+  rawInput?: unknown
+  rawOutput?: unknown
 }
 
 export interface AcpPlanUpdate {

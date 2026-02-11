@@ -187,6 +187,8 @@ export class AcpConverter {
       status: update.status ?? 'pending',
       content: update.content,
       locations: update.locations,
+      rawInput: update.rawInput,
+      rawOutput: update.rawOutput,
     }
   }
 
@@ -259,6 +261,7 @@ export class AcpConverter {
     }
 
     const contentText = toolCall.content ? this.extractTextFromContentField(toolCall.content) : ''
+    const rawInputText = this.stringifyRaw(toolCall.rawInput)
     const part: ToolCallPart = {
       type: 'tool_call',
       content: contentText,
@@ -267,7 +270,7 @@ export class AcpConverter {
       toolCallKind: toolCall.kind,
       toolCallStatus: toolCall.status,
       toolCallLocations: toolCall.locations,
-      toolCallInput: contentText || undefined,
+      toolCallInput: rawInputText || contentText || undefined,
     }
     this.toolCalls.set(toolCall.toolCallId, part)
 
@@ -294,13 +297,30 @@ export class AcpConverter {
       toolCallLocations: toolCall.locations,
     }
 
+    // Populate toolCallInput from rawInput when available (e.g. OpenCode sends
+    // the actual tool arguments here). Prefer rawInput over content text since
+    // content is reused for output on completion.
+    const rawInputText = this.stringifyRaw(toolCall.rawInput)
+    if (rawInputText) {
+      updated.toolCallInput = rawInputText
+    }
+
+    // Populate toolCallOutput from rawOutput when available
+    const rawOutputText = this.stringifyRaw(toolCall.rawOutput)
+    if (rawOutputText) {
+      updated.toolCallOutput = rawOutputText
+    }
+
     if (toolCall.content) {
       const newContent = this.extractTextFromContentField(toolCall.content)
       if (newContent) {
         updated.content = newContent
         // ACP reuses `content` for both input (on create) and output (on completion)
         if (toolCall.status === 'completed' || toolCall.status === 'failed') {
-          updated.toolCallOutput = newContent
+          // Only set toolCallOutput from content if rawOutput didn't already provide it
+          if (!updated.toolCallOutput) {
+            updated.toolCallOutput = newContent
+          }
         }
       }
     }
@@ -364,5 +384,20 @@ export class AcpConverter {
       return (block as { content: AcpContentBlock }).content
     }
     return block as AcpContentBlock
+  }
+
+  /**
+   * Stringify a rawInput / rawOutput value into a human-readable string.
+   * Returns an empty string when the value is nullish or an empty object.
+   */
+  private stringifyRaw(value: unknown): string {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'string') return value
+    if (typeof value === 'object' && Object.keys(value as object).length === 0) return ''
+    try {
+      return JSON.stringify(value, null, 2)
+    } catch {
+      return String(value)
+    }
   }
 }
