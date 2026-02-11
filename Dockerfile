@@ -36,14 +36,29 @@ FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    wget \
     ca-certificates \
     git \
+    ripgrep \
+    python3 \
+    jq \
+    zip \
+    unzip \
+    p7zip-full \
+    file \
+    sed \
+    gawk \
+    grep \
     && rm -rf /var/lib/apt/lists/*
 
 # Node.js 22 LTS
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# GitHub CLI
+RUN curl -fsSL https://github.com/cli/cli/releases/download/v2.86.0/gh_2.86.0_linux_amd64.tar.gz \
+    | tar xzf - --strip-components=2 -C /usr/local/bin gh_2.86.0_linux_amd64/bin/gh
 
 # Claude Code CLI (npm global install)
 RUN npm install -g @anthropic-ai/claude-code
