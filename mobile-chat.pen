@@ -560,7 +560,7 @@
                       "type": "text",
                       "id": "dm4zW",
                       "fill": "#374151",
-                      "content": "Agent: General",
+                      "content": "General",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "500"
@@ -593,7 +593,7 @@
                       "type": "text",
                       "id": "wsj7r",
                       "fill": "#374151",
-                      "content": "Model: Claude 3.5",
+                      "content": "Claude 3.5",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "500"
@@ -850,7 +850,7 @@
                           "type": "text",
                           "id": "lITsT",
                           "fill": "#374151",
-                          "content": "Agent: General",
+                          "content": "General",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "500"
@@ -883,7 +883,7 @@
                           "type": "text",
                           "id": "CPi8Q",
                           "fill": "#374151",
-                          "content": "Model: Claude 3.5",
+                          "content": "Claude 3.5",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "500"
@@ -1350,7 +1350,7 @@
                           "type": "text",
                           "id": "eFIj3",
                           "fill": "#374151",
-                          "content": "Agent: General",
+                          "content": "General",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "500"
@@ -1383,7 +1383,7 @@
                           "type": "text",
                           "id": "Vxm4F",
                           "fill": "#374151",
-                          "content": "Model: Claude 3.5",
+                          "content": "Claude 3.5",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "500"
