@@ -12,10 +12,10 @@ export default defineNuxtConfig({
     // At runtime, Node resolves better-sqlite3 from root /app/node_modules/ where
     // the full package (including native .node binary) is installed.
     rollupConfig: {
-      external: ['better-sqlite3', 'bindings', 'file-uri-to-path']
+      external: ['better-sqlite3', 'bindings', 'file-uri-to-path', '@zed-industries/claude-code-acp']
     },
     externals: {
-      external: ['better-sqlite3', 'bindings', 'file-uri-to-path']
+      external: ['better-sqlite3', 'bindings', 'file-uri-to-path', '@zed-industries/claude-code-acp']
     }
   },
   runtimeConfig: {
