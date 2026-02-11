@@ -174,13 +174,13 @@
         <div class="flex items-center justify-between gap-4 min-h-[28px]">
           <div class="flex items-center gap-2 min-h-[28px]">
             <UDropdownMenu v-if="modeOption" :items="modeItems" :ui="{ content: 'max-h-56 overflow-y-auto' }">
-              <button class="bg-[#F3F4F6] dark:bg-gray-700 rounded-md px-2 py-1.5 text-xs font-medium text-[#374151] dark:text-gray-300 flex items-center gap-1 hover:bg-[#E5E7EB] dark:hover:bg-gray-600 transition-colors max-w-[120px]">
+              <button :title="modeLabel" class="bg-[#F3F4F6] dark:bg-gray-700 rounded-md px-2 py-1.5 text-xs font-medium text-[#374151] dark:text-gray-300 flex items-center gap-1 hover:bg-[#E5E7EB] dark:hover:bg-gray-600 transition-colors max-w-[120px]">
                 <span class="truncate">{{ modeLabel }}</span>
                 <UIcon name="i-lucide-chevron-down" class="w-3 h-3 shrink-0 text-[#6B7280] dark:text-gray-400" />
               </button>
             </UDropdownMenu>
             <UDropdownMenu v-if="modelOption" :items="modelItems" :ui="{ content: 'max-h-56 overflow-y-auto' }">
-              <button class="bg-[#F3F4F6] dark:bg-gray-700 rounded-md px-2 py-1.5 text-xs font-medium text-[#374151] dark:text-gray-300 flex items-center gap-1 hover:bg-[#E5E7EB] dark:hover:bg-gray-600 transition-colors max-w-[120px]">
+              <button :title="modelLabel" class="bg-[#F3F4F6] dark:bg-gray-700 rounded-md px-2 py-1.5 text-xs font-medium text-[#374151] dark:text-gray-300 flex items-center gap-1 hover:bg-[#E5E7EB] dark:hover:bg-gray-600 transition-colors max-w-[120px]">
                 <span class="truncate">{{ modelLabel }}</span>
                 <UIcon name="i-lucide-chevron-down" class="w-3 h-3 shrink-0 text-[#6B7280] dark:text-gray-400" />
               </button>
