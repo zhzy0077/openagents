@@ -46,6 +46,19 @@ function resolveCommand(command: string, args: string[]): ResolvedCommand {
   }
 }
 
+function signalProcessGroup(child: ChildProcess, signal: NodeJS.Signals): boolean {
+  if (!child.pid) {
+    return false
+  }
+
+  try {
+    process.kill(-child.pid, signal)
+    return true
+  } catch {
+    return child.kill(signal)
+  }
+}
+
 class LocalProcessTransport implements ProcessTransport {
   readonly pid: number | undefined
   private child: ChildProcess
@@ -62,14 +75,14 @@ class LocalProcessTransport implements ProcessTransport {
   }
 
   kill(signal?: string): boolean {
-    return this.child.kill((signal || 'SIGTERM') as NodeJS.Signals)
+    return signalProcessGroup(this.child, (signal || 'SIGTERM') as NodeJS.Signals)
   }
 
   destroy(): void {
     this.child.stdin?.destroy()
     this.child.stdout?.destroy()
     this.child.stderr?.destroy()
-    this.child.kill('SIGKILL')
+    signalProcessGroup(this.child, 'SIGKILL')
   }
 }
 
@@ -94,6 +107,7 @@ export const localTransportFactory: TransportFactory = {
     const child = spawn(resolved.command, resolved.args, {
       cwd,
       env: processEnv,
+      detached: true,
       stdio: ['pipe', 'pipe', 'pipe']
     })
 

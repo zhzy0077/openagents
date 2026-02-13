@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
     git \
+    tini \
     ripgrep \
     python3 \
     jq \
@@ -88,4 +89,5 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
+ENTRYPOINT ["tini", "--"]
 CMD ["node", ".output/server/index.mjs"]
